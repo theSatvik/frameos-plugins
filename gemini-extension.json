@@ -1,0 +1,21 @@
+{
+  "name": "frameos",
+  "version": "0.1.0",
+  "description": "Turn long videos into captioned short clips with FrameOS: submit a link or upload, track the render, restyle captions, export MP4s, make thumbnails, draft social copy, and post to connected accounts.",
+  "mcpServers": {
+    "frameos": {
+      "httpUrl": "https://frameos.studio/mcp",
+      "headers": {
+        "X-FrameOS-Plugin-Version": "0.1.0"
+      },
+      "oauth": {
+        "enabled": true,
+        "scopes": [
+          "frameos:mcp"
+        ]
+      },
+      "timeout": 600000
+    }
+  },
+  "contextFileName": "GEMINI.md"
+}

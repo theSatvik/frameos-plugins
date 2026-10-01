@@ -1,0 +1,29 @@
+{
+  "name": "frameos",
+  "owner": {
+    "name": "FrameOS",
+    "email": "support@frameos.studio"
+  },
+  "plugins": [
+    {
+      "name": "frameos",
+      "source": "./agent-plugin",
+      "version": "0.1.0",
+      "description": "Turn long videos into captioned short clips with FrameOS: submit a link or upload, track the render, restyle captions, export MP4s, make thumbnails, draft social copy, and post to connected accounts.",
+      "license": "MIT",
+      "author": {
+        "name": "FrameOS"
+      },
+      "keywords": [
+        "video",
+        "clips",
+        "shorts",
+        "captions",
+        "reframe",
+        "podcast",
+        "repurposing",
+        "mcp"
+      ]
+    }
+  ]
+}

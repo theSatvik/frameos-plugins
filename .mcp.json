@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "frameos": {
+      "type": "http",
+      "url": "https://frameos.studio/mcp",
+      "oauth": {
+        "scopes": "frameos:mcp"
+      },
+      "scopes": [
+        "frameos:mcp"
+      ],
+      "oauth_resource": "https://frameos.studio/mcp",
+      "headers": {
+        "X-FrameOS-Plugin-Version": "0.1.0"
+      },
+      "http_headers": {
+        "X-FrameOS-Plugin-Version": "0.1.0"
+      }
+    }
+  }
+}

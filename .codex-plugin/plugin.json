@@ -1,0 +1,49 @@
+{
+  "name": "frameos",
+  "version": "0.1.0",
+  "description": "Turn long videos into captioned short clips with FrameOS: submit a link or upload, track the render, restyle captions, export MP4s, make thumbnails, draft social copy, and post to connected accounts.",
+  "author": {
+    "name": "FrameOS",
+    "email": "support@frameos.studio",
+    "url": "https://frameos.studio"
+  },
+  "homepage": "https://frameos.studio",
+  "repository": "https://github.com/theSatvik/frameos-plugins",
+  "license": "MIT",
+  "keywords": [
+    "video",
+    "clips",
+    "shorts",
+    "captions",
+    "reframe",
+    "podcast",
+    "repurposing",
+    "mcp"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "FrameOS",
+    "shortDescription": "Turn long videos into shorts",
+    "longDescription": "FrameOS turns long videos - podcasts, streams, interviews, webinars - into captioned short clips. Paste a link or upload a file and FrameOS finds the strongest moments, reframes them for 9:16, 4:5, 3:4, 1:1 or 16:9, and burns in your caption style. From here you can track the render, review clips with their scores and timestamps, restyle captions, export MP4s, make thumbnails, organise clips into collections, draft platform-ready titles and captions, and post to YouTube, Instagram, Facebook or LinkedIn accounts you connected in FrameOS. Processing uses your FrameOS credits; nothing is posted without your explicit go-ahead.",
+    "developerName": "FrameOS",
+    "category": "Creativity",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://frameos.studio",
+    "supportURL": "https://frameos.studio/contact",
+    "privacyPolicyURL": "https://frameos.studio/privacy",
+    "termsOfServiceURL": "https://frameos.studio/terms",
+    "defaultPrompt": [
+      "Turn my latest podcast episode into 5 vertical shorts",
+      "Show my FrameOS credits and my most recent projects",
+      "Restyle the captions on my best clip and export the MP4"
+    ],
+    "brandColor": "#0B0B0D",
+    "composerIcon": "./assets/icon.png",
+    "logo": "./assets/icon.png"
+  }
+}

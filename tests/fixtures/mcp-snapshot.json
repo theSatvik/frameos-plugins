@@ -1,0 +1,937 @@
+{
+  "initialize": {
+    "capabilities": {
+      "experimental": {},
+      "prompts": {
+        "listChanged": false
+      },
+      "resources": {
+        "listChanged": false,
+        "subscribe": false
+      },
+      "tools": {
+        "listChanged": false
+      }
+    },
+    "instructions": "Create clips with submit_video, then poll get_job and call list_clips after completion. Processing consumes FrameOS credits. Use only projects the connected account owns.",
+    "protocolVersion": "2025-11-25",
+    "serverInfo": {
+      "name": "frameos",
+      "version": "0.1.0"
+    }
+  },
+  "tools_list": {
+    "tools": [
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true,
+          "readOnlyHint": false
+        },
+        "description": "Submit a video URL for AI clipping. Starts a credit-consuming render job and returns its job ID.",
+        "inputSchema": {
+          "properties": {
+            "source_url": {
+              "title": "Source Url",
+              "type": "string"
+            },
+            "max_clips": {
+              "default": 3,
+              "title": "Max Clips",
+              "type": "integer"
+            },
+            "aspect_ratio": {
+              "default": "9:16",
+              "enum": [
+                "9:16",
+                "3:4",
+                "4:5",
+                "1:1",
+                "16:9"
+              ],
+              "title": "Aspect Ratio",
+              "type": "string"
+            },
+            "focus_prompt": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Focus Prompt"
+            }
+          },
+          "required": [
+            "source_url"
+          ],
+          "type": "object",
+          "title": "submit_videoArguments"
+        },
+        "name": "submit_video"
+      },
+      {
+        "annotations": {
+          "openWorldHint": false,
+          "readOnlyHint": true
+        },
+        "description": "List clipping projects owned by the connected FrameOS account.",
+        "inputSchema": {
+          "properties": {
+            "limit": {
+              "default": 10,
+              "title": "Limit",
+              "type": "integer"
+            },
+            "offset": {
+              "default": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          "type": "object",
+          "title": "list_projectsArguments"
+        },
+        "name": "list_projects",
+        "outputSchema": {
+          "properties": {
+            "result": {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "title": "Result",
+              "type": "array"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "type": "object",
+          "title": "list_projectsOutput"
+        }
+      },
+      {
+        "annotations": {
+          "openWorldHint": false,
+          "readOnlyHint": true
+        },
+        "description": "Get the status and summary of one FrameOS clipping project.",
+        "inputSchema": {
+          "properties": {
+            "project_id": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          "required": [
+            "project_id"
+          ],
+          "type": "object",
+          "title": "get_projectArguments"
+        },
+        "name": "get_project"
+      },
+      {
+        "annotations": {
+          "openWorldHint": false,
+          "readOnlyHint": true
+        },
+        "description": "Check render progress using the job ID returned by submit_video.",
+        "inputSchema": {
+          "properties": {
+            "job_id": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          "required": [
+            "job_id"
+          ],
+          "type": "object",
+          "title": "get_jobArguments"
+        },
+        "name": "get_job"
+      },
+      {
+        "annotations": {
+          "openWorldHint": false,
+          "readOnlyHint": true
+        },
+        "description": "List project clips. If exportRequired is true, call export_clip for the captioned download.",
+        "inputSchema": {
+          "properties": {
+            "project_id": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          "required": [
+            "project_id"
+          ],
+          "type": "object",
+          "title": "list_clipsArguments"
+        },
+        "name": "list_clips",
+        "outputSchema": {
+          "properties": {
+            "result": {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "title": "Result",
+              "type": "array"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "type": "object",
+          "title": "list_clipsOutput"
+        }
+      },
+      {
+        "annotations": {
+          "openWorldHint": false,
+          "readOnlyHint": true
+        },
+        "description": "Identify the connected FrameOS user, workspace, plan, and credit balance.",
+        "inputSchema": {
+          "properties": {},
+          "type": "object",
+          "title": "whoamiArguments"
+        },
+        "name": "whoami"
+      },
+      {
+        "annotations": {
+          "openWorldHint": false,
+          "readOnlyHint": true
+        },
+        "description": "Read the workspace's recent credit usage and current credit balance.",
+        "inputSchema": {
+          "properties": {},
+          "type": "object",
+          "title": "get_usageArguments"
+        },
+        "name": "get_usage"
+      },
+      {
+        "annotations": {
+          "openWorldHint": false,
+          "readOnlyHint": true
+        },
+        "description": "Read one clip's title, score, transcript, aspect, preview, and export requirement.",
+        "inputSchema": {
+          "properties": {
+            "clip_id": {
+              "title": "Clip Id",
+              "type": "string"
+            }
+          },
+          "required": [
+            "clip_id"
+          ],
+          "type": "object",
+          "title": "describe_clipArguments"
+        },
+        "name": "describe_clip"
+      },
+      {
+        "annotations": {
+          "openWorldHint": false,
+          "readOnlyHint": true
+        },
+        "description": "Read a page or time range of the full source-video transcript. New renders store this artifact; older projects may lack it.",
+        "inputSchema": {
+          "properties": {
+            "project_id": {
+              "title": "Project Id",
+              "type": "string"
+            },
+            "start_ms": {
+              "default": 0,
+              "title": "Start Ms",
+              "type": "integer"
+            },
+            "end_ms": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "End Ms"
+            },
+            "offset": {
+              "default": 0,
+              "title": "Offset",
+              "type": "integer"
+            },
+            "limit": {
+              "default": 100,
+              "title": "Limit",
+              "type": "integer"
+            },
+            "include_words": {
+              "default": false,
+              "title": "Include Words",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "project_id"
+          ],
+          "type": "object",
+          "title": "get_transcriptArguments"
+        },
+        "name": "get_transcript"
+      },
+      {
+        "annotations": {
+          "openWorldHint": false,
+          "readOnlyHint": true
+        },
+        "description": "Read the connected workspace's current brand settings; FrameOS has one brand kit, not a template library.",
+        "inputSchema": {
+          "properties": {},
+          "type": "object",
+          "title": "get_brandArguments"
+        },
+        "name": "get_brand"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "readOnlyHint": false
+        },
+        "description": "Get a captioned MP4 download. May start an export job; poll get_job, then call again for its URL.",
+        "inputSchema": {
+          "properties": {
+            "clip_id": {
+              "title": "Clip Id",
+              "type": "string"
+            },
+            "style": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Style"
+            },
+            "filename": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Filename"
+            }
+          },
+          "required": [
+            "clip_id"
+          ],
+          "type": "object",
+          "title": "export_clipArguments"
+        },
+        "name": "export_clip"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "readOnlyHint": false
+        },
+        "description": "Create a separate clip record using the same rendered media, without charging or re-rendering.",
+        "inputSchema": {
+          "properties": {
+            "clip_id": {
+              "title": "Clip Id",
+              "type": "string"
+            }
+          },
+          "required": [
+            "clip_id"
+          ],
+          "type": "object",
+          "title": "duplicate_clipArguments"
+        },
+        "name": "duplicate_clip"
+      },
+      {
+        "annotations": {
+          "openWorldHint": false,
+          "readOnlyHint": true
+        },
+        "description": "List clip collections in the connected FrameOS workspace.",
+        "inputSchema": {
+          "properties": {},
+          "type": "object",
+          "title": "list_collectionsArguments"
+        },
+        "name": "list_collections",
+        "outputSchema": {
+          "properties": {
+            "result": {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "title": "Result",
+              "type": "array"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "type": "object",
+          "title": "list_collectionsOutput"
+        }
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "readOnlyHint": false
+        },
+        "description": "Create a named workspace collection for organizing clips.",
+        "inputSchema": {
+          "properties": {
+            "name": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "type": "object",
+          "title": "create_collectionArguments"
+        },
+        "name": "create_collection"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "readOnlyHint": false
+        },
+        "description": "Add an owned clip to an owned collection; repeated calls do not create duplicates.",
+        "inputSchema": {
+          "properties": {
+            "collection_id": {
+              "title": "Collection Id",
+              "type": "string"
+            },
+            "clip_id": {
+              "title": "Clip Id",
+              "type": "string"
+            }
+          },
+          "required": [
+            "collection_id",
+            "clip_id"
+          ],
+          "type": "object",
+          "title": "add_clip_to_collectionArguments"
+        },
+        "name": "add_clip_to_collection"
+      },
+      {
+        "annotations": {
+          "openWorldHint": false,
+          "readOnlyHint": true
+        },
+        "description": "List clips in a workspace collection with fresh preview URLs.",
+        "inputSchema": {
+          "properties": {
+            "collection_id": {
+              "title": "Collection Id",
+              "type": "string"
+            }
+          },
+          "required": [
+            "collection_id"
+          ],
+          "type": "object",
+          "title": "list_clips_in_collectionArguments"
+        },
+        "name": "list_clips_in_collection",
+        "outputSchema": {
+          "properties": {
+            "result": {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "title": "Result",
+              "type": "array"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "type": "object",
+          "title": "list_clips_in_collectionOutput"
+        }
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "readOnlyHint": false
+        },
+        "description": "Get captioned export URLs or export job IDs for up to 50 clips in a collection.",
+        "inputSchema": {
+          "properties": {
+            "collection_id": {
+              "title": "Collection Id",
+              "type": "string"
+            }
+          },
+          "required": [
+            "collection_id"
+          ],
+          "type": "object",
+          "title": "export_collectionArguments"
+        },
+        "name": "export_collection"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "readOnlyHint": false
+        },
+        "description": "Get a one-hour signed PUT URL for a video file; upload bytes, then call submit_uploaded_video.",
+        "inputSchema": {
+          "properties": {
+            "filename": {
+              "title": "Filename",
+              "type": "string"
+            },
+            "content_type": {
+              "default": "video/mp4",
+              "title": "Content Type",
+              "type": "string"
+            }
+          },
+          "required": [
+            "filename"
+          ],
+          "type": "object",
+          "title": "create_upload_linkArguments"
+        },
+        "name": "create_upload_link"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "readOnlyHint": false
+        },
+        "description": "Start clipping an uploaded file using the gs_path from create_upload_link. Consumes credits.",
+        "inputSchema": {
+          "properties": {
+            "gs_path": {
+              "title": "Gs Path",
+              "type": "string"
+            },
+            "max_clips": {
+              "default": 3,
+              "title": "Max Clips",
+              "type": "integer"
+            },
+            "aspect_ratio": {
+              "default": "9:16",
+              "enum": [
+                "9:16",
+                "3:4",
+                "4:5",
+                "1:1",
+                "16:9"
+              ],
+              "title": "Aspect Ratio",
+              "type": "string"
+            },
+            "focus_prompt": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Focus Prompt"
+            }
+          },
+          "required": [
+            "gs_path"
+          ],
+          "type": "object",
+          "title": "submit_uploaded_videoArguments"
+        },
+        "name": "submit_uploaded_video"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "readOnlyHint": false
+        },
+        "description": "Change the saved overlay caption style and optional appearance; export uses the new look.",
+        "inputSchema": {
+          "properties": {
+            "clip_id": {
+              "title": "Clip Id",
+              "type": "string"
+            },
+            "style": {
+              "title": "Style",
+              "type": "string"
+            },
+            "appearance": {
+              "anyOf": [
+                {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Appearance"
+            }
+          },
+          "required": [
+            "clip_id",
+            "style"
+          ],
+          "type": "object",
+          "title": "set_caption_styleArguments"
+        },
+        "name": "set_caption_style"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "readOnlyHint": false
+        },
+        "description": "Re-render captions on an older burned-caption clip; returns a job to poll.",
+        "inputSchema": {
+          "properties": {
+            "clip_id": {
+              "title": "Clip Id",
+              "type": "string"
+            },
+            "style": {
+              "title": "Style",
+              "type": "string"
+            },
+            "appearance": {
+              "anyOf": [
+                {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Appearance"
+            }
+          },
+          "required": [
+            "clip_id",
+            "style"
+          ],
+          "type": "object",
+          "title": "recaption_clipArguments"
+        },
+        "name": "recaption_clip"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true,
+          "readOnlyHint": false
+        },
+        "description": "Generate up to three thumbnails for a clip, project, or URL. Costs FrameOS credits; returns a job ID.",
+        "inputSchema": {
+          "properties": {
+            "clip_id": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Clip Id"
+            },
+            "video_id": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Video Id"
+            },
+            "url": {
+              "default": "",
+              "title": "Url",
+              "type": "string"
+            },
+            "max_thumbnails": {
+              "default": 3,
+              "title": "Max Thumbnails",
+              "type": "integer"
+            },
+            "include_face": {
+              "default": false,
+              "title": "Include Face",
+              "type": "boolean"
+            },
+            "aspect": {
+              "default": "auto",
+              "enum": [
+                "auto",
+                "16:9",
+                "9:16",
+                "1:1",
+                "4:5",
+                "3:4"
+              ],
+              "title": "Aspect",
+              "type": "string"
+            },
+            "style_ref": {
+              "default": "",
+              "title": "Style Ref",
+              "type": "string"
+            }
+          },
+          "type": "object",
+          "title": "create_thumbnail_jobArguments"
+        },
+        "name": "create_thumbnail_job"
+      },
+      {
+        "annotations": {
+          "openWorldHint": false,
+          "readOnlyHint": true
+        },
+        "description": "Check a thumbnail job's progress and result images.",
+        "inputSchema": {
+          "properties": {
+            "job_id": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          "required": [
+            "job_id"
+          ],
+          "type": "object",
+          "title": "get_thumbnail_jobArguments"
+        },
+        "name": "get_thumbnail_job"
+      },
+      {
+        "annotations": {
+          "openWorldHint": false,
+          "readOnlyHint": true
+        },
+        "description": "List generated thumbnails in the connected workspace.",
+        "inputSchema": {
+          "properties": {
+            "limit": {
+              "default": 30,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          "type": "object",
+          "title": "list_thumbnailsArguments"
+        },
+        "name": "list_thumbnails",
+        "outputSchema": {
+          "properties": {
+            "result": {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "title": "Result",
+              "type": "array"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "type": "object",
+          "title": "list_thumbnailsOutput"
+        }
+      },
+      {
+        "annotations": {
+          "openWorldHint": false,
+          "readOnlyHint": true
+        },
+        "description": "List social publishing accounts already connected to the FrameOS workspace.",
+        "inputSchema": {
+          "properties": {},
+          "type": "object",
+          "title": "list_social_accountsArguments"
+        },
+        "name": "list_social_accounts",
+        "outputSchema": {
+          "properties": {
+            "result": {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "title": "Result",
+              "type": "array"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "type": "object",
+          "title": "list_social_accountsOutput"
+        }
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "readOnlyHint": false
+        },
+        "description": "Draft title, caption, and hashtags from a clip transcript using the configured model; does not post or charge credits.",
+        "inputSchema": {
+          "properties": {
+            "clip_id": {
+              "title": "Clip Id",
+              "type": "string"
+            },
+            "platform": {
+              "enum": [
+                "youtube",
+                "instagram",
+                "facebook",
+                "linkedin",
+                "tiktok",
+                "x"
+              ],
+              "title": "Platform",
+              "type": "string"
+            },
+            "tone": {
+              "default": "clear and natural",
+              "title": "Tone",
+              "type": "string"
+            }
+          },
+          "required": [
+            "clip_id",
+            "platform"
+          ],
+          "type": "object",
+          "title": "generate_social_copyArguments"
+        },
+        "name": "generate_social_copy"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true,
+          "readOnlyHint": false
+        },
+        "description": "Publish a clip now to a connected social account. Call only when the user explicitly asks to publish.",
+        "inputSchema": {
+          "properties": {
+            "clip_id": {
+              "title": "Clip Id",
+              "type": "string"
+            },
+            "account_id": {
+              "title": "Account Id",
+              "type": "string"
+            },
+            "title": {
+              "default": "",
+              "title": "Title",
+              "type": "string"
+            },
+            "description": {
+              "default": "",
+              "title": "Description",
+              "type": "string"
+            },
+            "privacy": {
+              "default": "public",
+              "enum": [
+                "public",
+                "unlisted",
+                "private"
+              ],
+              "title": "Privacy",
+              "type": "string"
+            }
+          },
+          "required": [
+            "clip_id",
+            "account_id"
+          ],
+          "type": "object",
+          "title": "post_clipArguments"
+        },
+        "name": "post_clip"
+      }
+    ]
+  },
+  "_source": "FrameOS-Backend mcp_server/frameos_mcp/server.py sha256 0120b200044614a980ab64bfe9ee1b00c2a3f18b5051a5357a187474f5b75b56 (branch codex/mcp-deploy, 2026-10-02)"
+}

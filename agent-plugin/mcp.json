@@ -1,0 +1,12 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "frameos": {
+      "type": "streamable-http",
+      "url": "https://frameos.studio/mcp",
+      "headers": {
+        "X-FrameOS-Plugin-Version": "0.1.0"
+      }
+    }
+  }
+}
