@@ -133,7 +133,7 @@ For each clip the user wants:
 3. `status` is `rendering`: poll `get_job` with the returned `job_id` every 5 seconds (usually 15-60 seconds). When it is `completed`, call `export_clip` ONCE more with the same arguments to get the link. If it ends `failed`, tell the user; one more `export_clip` call is allowed, then stop.
 4. Never call `export_clip` for that clip again while its job is still running: every call starts another render. If the job has not completed after 10 minutes, stop polling, tell the user it looks stuck, and check the job again when they ask. Call `export_clip` again only after the job has ended.
 5. Several clips: start each export once, poll all their jobs, then make one more `export_clip` call per finished clip to collect the links.
-6. When `whoami` shows the free plan, mention that free-plan clips carry a small FrameOS watermark and paid plans export without it.
+6. Watermark: `whoami` returns `account.plan` as `free`, `starter` or `pro`. Only when it is exactly `free`, mention that free-plan clips carry a small FrameOS watermark and paid plans export without it. For `starter` or `pro`, say nothing about watermarks.
 7. With a shell, save files only when asked: `curl -sS --fail -L -o "clip-1.mp4" "DOWNLOAD_URL"`.
 8. Links expire. For a fresh link later, call `export_clip` again (it answers `ready` at once when the file already exists).
 9. If a clip is reported as not found, it is a leftover from an earlier run of the project: refresh with `list_clips` and skip it.
