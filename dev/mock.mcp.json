@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "frameos": {
+      "type": "stdio",
+      "command": "uv",
+      "args": ["run", "--script", "dev/mock_server.py"],
+      "env": {
+        "FRAMEOS_MOCK_CREDITS": "120",
+        "FRAMEOS_MOCK_SPEED": "fast"
+      }
+    }
+  }
+}

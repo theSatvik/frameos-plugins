@@ -1,0 +1,4 @@
+description = "Make thumbnails for a FrameOS clip or video"
+prompt = """Use the frameos-thumbnails skill (in this extension's skills/ folder) to make thumbnails for a clip or video. Tell the user the credit cost and get a clear yes before starting, unless the request already asked for thumbnails explicitly.
+
+Request: {{args}}"""

@@ -1,0 +1,4 @@
+description = "Connect FrameOS, check your credit balance, or fix a sign-in problem"
+prompt = """Use the frameos-setup skill (in this extension's skills/ folder) to check that FrameOS is connected: confirm the account with whoami, summarise the workspace, plan and credit balance in plain words, and offer three things to try next. If FrameOS is not connected or a tool fails with a sign-in error, walk the user through /mcp auth frameos and the other steps in the skill.
+
+Request: {{args}}"""

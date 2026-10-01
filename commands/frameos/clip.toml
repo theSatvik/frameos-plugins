@@ -1,0 +1,4 @@
+description = "Turn a long video (link or local file) into short captioned clips"
+prompt = """Use the frameos-clip skill (in this extension's skills/ folder) to turn a long video into short clips. Take the video link or local file path from the request, use the skill's defaults for anything the user did not specify, start the render, keep the user posted while it runs, and present the finished clips as a short ranked list. Export MP4 files only if the user asks for files.
+
+Request: {{args}}"""

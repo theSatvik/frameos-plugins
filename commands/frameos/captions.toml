@@ -1,0 +1,4 @@
+description = "Restyle the captions on a FrameOS clip, then export the captioned MP4"
+prompt = """Use the frameos-captions skill (in this extension's skills/ folder) to change how the captions look on a clip - style, font, size, position or animation - and then export the captioned MP4. Pick styles, fonts and animations only from the skill's catalogue.
+
+Request: {{args}}"""

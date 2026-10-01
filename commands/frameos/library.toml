@@ -1,0 +1,4 @@
+description = "Find past FrameOS projects and clips, organise collections, check credit usage"
+prompt = """Use the frameos-library skill (in this extension's skills/ folder) to find past projects and clips, organise clips into collections, export a collection, or show recent credit usage and the current balance.
+
+Request: {{args}}"""

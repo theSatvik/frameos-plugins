@@ -1,0 +1,4 @@
+description = "Plan and run a content pack from one video: clips, captions, thumbnails, copy"
+prompt = """Use the frameos-repurpose skill (in this extension's skills/ folder) to turn one video into a content pack: clips in the right formats, a caption style, thumbnails, copy for each platform and a collection named after the episode. Show the full plan and the credit use first and wait for the user's approval. Posting, if wanted, is confirmed one post at a time at the end.
+
+Request: {{args}}"""

@@ -1,0 +1,4 @@
+description = "Draft social copy for a clip, or post it to a connected account"
+prompt = """Use the frameos-publish skill (in this extension's skills/ folder) to draft a title, caption and hashtags for a clip, or to post it to a social account connected in FrameOS. Post only if the request explicitly asks to post or publish, and confirm every single post with the user first (platform, account, text and privacy). Drafting never posts.
+
+Request: {{args}}"""

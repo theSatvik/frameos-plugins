@@ -1,0 +1,53 @@
+[
+  {
+    "id": "6f1c2b9e-4d3a-4e8f-9b1a-2c7d5e0f8a14",
+    "title": "Episode 112 - Why we killed our free plan",
+    "status": "completed",
+    "progress": 100,
+    "etaRemainingSeconds": 0,
+    "processingMessage": "3 clips ready",
+    "source": "https://www.youtube.com/watch?v=8xL3pQz1mVw",
+    "sourceType": "url",
+    "filename": "Episode 112 - Why we killed our free plan",
+    "thumbnailUrl": "https://mock.frameos.invalid/media/ep112/poster.jpg?Expires=1759424400&Signature=mock",
+    "durationSec": 2843,
+    "errorMessage": null,
+    "createdAt": "2026-10-01T16:42:10Z",
+    "clipCount": 3,
+    "clips": []
+  },
+  {
+    "id": "1d9b7c4e-2a6f-4b3e-a5d8-9e0c3f7b6a51",
+    "title": "Launch week AMA",
+    "status": "failed",
+    "progress": 30,
+    "etaRemainingSeconds": 0,
+    "processingMessage": "We could not find a moment strong enough to clip in this video. (no_clips_found)",
+    "source": "https://www.twitch.tv/videos/2245517830",
+    "sourceType": "url",
+    "filename": "Launch week AMA",
+    "thumbnailUrl": null,
+    "durationSec": 1260,
+    "errorMessage": "We could not find a moment strong enough to clip in this video. (no_clips_found)",
+    "createdAt": "2026-09-28T09:12:55Z",
+    "clipCount": 0,
+    "clips": []
+  },
+  {
+    "id": "a83e5d17-9c2b-4f61-8e3d-7b5a1c9f0e22",
+    "title": "Episode 111 - Churn is a pricing problem",
+    "status": "completed",
+    "progress": 100,
+    "etaRemainingSeconds": 0,
+    "processingMessage": "5 clips ready",
+    "source": "https://www.youtube.com/watch?v=Tn2cW7yHs4E",
+    "sourceType": "url",
+    "filename": "Episode 111 - Churn is a pricing problem",
+    "thumbnailUrl": "https://mock.frameos.invalid/media/ep111/poster.jpg?Expires=1759424400&Signature=mock",
+    "durationSec": 3120,
+    "errorMessage": null,
+    "createdAt": "2026-09-24T11:20:03Z",
+    "clipCount": 5,
+    "clips": []
+  }
+]
