@@ -50,6 +50,7 @@ The video itself (same source gives the same result - do not re-submit it unchan
 | Code | Meaning | Next step for the user |
 |---|---|---|
 | `(source_too_short)` | under 30 seconds of video | use a longer video |
+| `(insufficient_credits)` | the video turned out longer than the balance covers; checked right after download, nothing was charged | add credits (https://frameos.studio/pricing) or use a shorter video |
 | `(no_clips_found)` | not enough clear speech | use a longer video, or one with more talking |
 | `(no_publishable_clips)` | moments found, none stood on their own | use a longer video, or one where the speaker finishes complete thoughts |
 | `(not_a_video)` | the file is an image | upload a video file |
@@ -93,6 +94,8 @@ Messages without a code:
 | Error | Meaning | What to do |
 |---|---|---|
 | 402 `Out of credits...` | balance is 0 | link https://frameos.studio/pricing and stop; never retry. An empty pending project may be left behind; it costs nothing |
+| 402 `This video is N minutes long and needs N credits, but your workspace has M...` | the length is known at submit (uploaded files, Vimeo) and the balance does not cover it | tell the user the shortfall, link https://frameos.studio/pricing, or suggest a shorter video; never retry |
+| 429 `N videos are already processing in this workspace (limit N)...` | the workspace already has the maximum renders running (usually 3); nothing was submitted | show what is rendering with `list_projects`; submit again only after one finishes |
 | 422 `This video is only N seconds long...` | under 30 seconds (caught at submit only when the length is known up front) | use a longer video |
 | 422 `Unsupported aspect ratio` | shape not allowed | use 9:16, 4:5, 3:4, 1:1 or 16:9 |
 | 422 with a list of field errors | link not http(s) or not 8-2048 characters, clip count outside 1-20, or focus text over 1000 characters | fix the field and submit again |

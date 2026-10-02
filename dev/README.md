@@ -128,6 +128,8 @@ Errors surface as tool errors with the real server's text, `FrameOS returned HTT
 | `FRAMEOS_MOCK_SOCIAL` | `1` | `0` starts with no connected social accounts. By default there is one each for YouTube, Instagram, LinkedIn and Facebook. |
 | `FRAMEOS_MOCK_BRAND_LOGO` | `0` | `1` makes `get_brand` return a logo. |
 | `FRAMEOS_MOCK_ERRORS` | `detailed` | `opaque` reproduces what today's real server shows (see below). |
+| `FRAMEOS_MOCK_GUARDRAILS` | on | The launch guardrails: a render starts only when the balance covers the video (402 at submit when the length is known, `(insufficient_credits)` after download otherwise), and at most `FRAMEOS_MOCK_MAX_CONCURRENT` renders run at once (429). Set `0` to switch them off. |
+| `FRAMEOS_MOCK_MAX_CONCURRENT` | `3` | The render limit per workspace. |
 | `FRAMEOS_MOCK_UPLOAD_PORT` | `0` | stdio mode only: the port for the upload receiver (`0` = any free port). In HTTP mode, uploads go to the same port as `/mcp`. |
 | `FRAMEOS_MOCK_QUIET` | unset | `1` drops the one-line startup message on stderr. |
 

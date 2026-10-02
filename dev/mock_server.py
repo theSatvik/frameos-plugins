@@ -52,6 +52,21 @@ INSTRUCTIONS = (
 )
 
 MOCK_HOST = "https://mock.frameos.invalid"
+
+# Launch guardrail messages. Keep them identical to the spec handed to the MCP
+# connector owner (FrameOS-Backend task file, section 1, owner decision 2026-10-02).
+SHORTFALL_SUBMIT_MESSAGE = (
+    "This video is {minutes} minutes long and needs {needed} credits, but your workspace has "
+    "{balance}. Add credits or use a shorter video."
+)
+SHORTFALL_WORKER_MESSAGE = (
+    "This video is {minutes} minutes long and needs {needed} credits, but your workspace has "
+    "{balance}. Nothing was charged. (insufficient_credits)"
+)
+CONCURRENCY_MESSAGE = (
+    "{active} videos are already processing in this workspace (limit {limit}). "
+    "Wait for one to finish, then submit again."
+)
 BUCKET = "frameos-mock-bucket"
 DEFAULT_HTTP_PORT = 8790
 
@@ -483,6 +498,10 @@ class MockConfig:
     social_accounts: bool = True
     brand_logo: bool = False
     errors: str = "detailed"  # "detailed" or "opaque"
+    # Launch guardrails (owner decision 2026-10-02): a render must be covered by
+    # the balance, and at most `max_concurrent` renders run per workspace.
+    guardrails: bool = True
+    max_concurrent: int = 3
 
     @classmethod
     def from_env(cls, env: Optional[dict] = None) -> "MockConfig":
@@ -505,6 +524,10 @@ class MockConfig:
             credits = 120
         plan = str(env.get("FRAMEOS_MOCK_PLAN", "starter")).strip().lower()
         errors = str(env.get("FRAMEOS_MOCK_ERRORS", "detailed")).strip().lower()
+        try:
+            max_concurrent = int(env.get("FRAMEOS_MOCK_MAX_CONCURRENT", "3"))
+        except ValueError:
+            max_concurrent = 3
         return cls(
             credits=max(0, credits),
             plan=plan if plan in {"free", "starter", "pro"} else "starter",
@@ -513,6 +536,8 @@ class MockConfig:
             social_accounts=flag("FRAMEOS_MOCK_SOCIAL", True),
             brand_logo=flag("FRAMEOS_MOCK_BRAND_LOGO", False),
             errors=errors if errors in {"detailed", "opaque"} else "detailed",
+            guardrails=flag("FRAMEOS_MOCK_GUARDRAILS", True),
+            max_concurrent=max(1, max_concurrent),
         )
 
 
@@ -995,8 +1020,10 @@ class MockState:
 
         project.status, project.progress, project.error_message = "processing", 0, None
         fail = "no-clips" in project.source.lower()
+        needed = self._credits_needed(project)
+        short = (self.config.guardrails and duration is None and self._balance() < needed)
         segments, _ = self._build_transcript(project)
-        planned = [] if fail else self._make_clips(project, segments)
+        planned = [] if (fail or short) else self._make_clips(project, segments)
         job_id = f"clip:render:{project.id}"
         eta = _eta_seconds(duration, project.max_clips)
 
@@ -1015,7 +1042,15 @@ class MockState:
             elif stage.state == "failed":
                 project.status, project.progress, project.error_message = "failed", 100, stage.message
 
-        stages = self._render_stages(project, len(planned), len(segments), fail)
+        if short:
+            stages = [
+                Stage(0.0, "pending", 0.0, "queued", 0),
+                Stage(0.12, "processing", 0.05, "downloading source", 5),
+                Stage(0.3, "failed", 1.0, SHORTFALL_WORKER_MESSAGE.format(
+                    minutes=needed, needed=needed, balance=self._balance()), 100),
+            ]
+        else:
+            stages = self._render_stages(project, len(planned), len(segments), fail)
         self._new_job(job_id, "render", stages, eta=eta, duration=duration, on_stage=on_stage)
         project.job_id = job_id
         return {
@@ -1046,6 +1081,13 @@ class MockState:
         if project.uploaded:  # uploaded sources are deleted after a successful render
             project.source_deleted = True
 
+    @staticmethod
+    def _credits_needed(project: Project) -> int:
+        # Billable minutes for the whole source, minus a span this row already paid for.
+        if project.credits_charged_minutes:
+            return 0
+        return max(1, math.ceil(project.sim_duration / 60.0))
+
     def _start_video(self, source: str, filename: str, max_clips: int, aspect_ratio: str,
                      focus_prompt: Optional[str], *, uploaded: bool = False) -> dict:
         if aspect_ratio not in {"9:16", "3:4", "4:5", "1:1", "16:9"}:
@@ -1055,6 +1097,20 @@ class MockState:
             if project.source == source:
                 prior = project
                 break
+        if prior is not None and prior.status in ("pending", "processing"):
+            live = self.jobs.get(f"clip:render:{prior.id}")
+            if live is not None and live.current.state in ("pending", "processing"):
+                return {"project": self._video_response(prior),
+                        "job": {"job_id": f"clip:render:{prior.id}", "status": "already_running"}}
+        if self.config.guardrails:
+            # Only renders with a live job count: a row left pending by a failed start
+            # (for example a 402) must not lock the workspace out.
+            active = sum(1 for p in self.projects.values()
+                         if p.status in ("pending", "processing") and (prior is None or p.id != prior.id)
+                         and (job := self.jobs.get(f"clip:render:{p.id}")) is not None
+                         and job.current.state in ("pending", "processing"))
+            if active >= self.config.max_concurrent:
+                raise FrameOSHTTPError(429, CONCURRENCY_MESSAGE.format(active=active, limit=self.config.max_concurrent))
         if prior is not None and prior.status in ("failed", "cancelled", "pending", "processing"):
             if prior.status in ("failed", "cancelled"):
                 prior.status, prior.progress, prior.error_message = "pending", 0, None
@@ -1067,7 +1123,7 @@ class MockState:
                         "job": {"job_id": f"clip:render:{project.id}", "status": "already_running"}}
         else:
             sim = self._sim_duration(source)
-            known = self._known_duration_at_submit(source, sim)
+            known = sim if uploaded else self._known_duration_at_submit(source, sim)
             project = Project(
                 id=str(uuid.uuid4()),
                 title=_clean_text(filename) or self._source_title(source),
@@ -1081,6 +1137,11 @@ class MockState:
             snapshot = self._video_response(project)
         if self._balance() <= 0:
             raise FrameOSHTTPError(402, "Out of credits. Upgrade your plan or add credits to keep processing.")
+        needed = self._credits_needed(project)
+        if self.config.guardrails and project.known_duration is not None \
+                and project.known_duration >= MIN_SOURCE_SECONDS and self._balance() < needed:
+            raise FrameOSHTTPError(402, SHORTFALL_SUBMIT_MESSAGE.format(
+                minutes=needed, needed=needed, balance=self._balance()))
         project.max_clips = max(1, min(20, int(max_clips)))
         project.aspect_ratio = aspect_ratio
         project.focus_prompt = (focus_prompt or "")[:400] or None

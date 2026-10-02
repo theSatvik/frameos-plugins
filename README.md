@@ -32,9 +32,12 @@ More ready-to-use prompts, grouped by job, are in [docs/workflows.md](docs/workf
 
 ### How credits work
 
+- It works on every FrameOS plan. All you need is credits.
 - A render costs 1 credit per started minute of source video, and you're only charged when clips are delivered.
 - Thumbnails cost 10 credits each.
 - Exports, caption changes, copy drafts, collections and posting are free.
+- A render only starts when your balance covers the whole video, so you never end up with a half-paid render.
+- Up to 3 videos can be processing at once in a workspace. Your agent queues the rest and submits them as renders finish.
 - Ask your agent "What is my FrameOS credit balance?" any time. Plans and prices live on https://frameos.studio/pricing; your agent won't quote them.
 
 ## Install

@@ -30,7 +30,12 @@ These are owned by the MCP connector work, not by this repo:
 1. **Clerk scope.** Create the `frameos:mcp` scope, advertise it, assign it to the OAuth applications that may request it, and add it to the default scopes for dynamic clients. Several clients only request scopes the sign-in server advertises (table below).
 2. **Clerk client onboarding.** Turn on CIMD (used by Claude's apps, Claude Code, Codex, VS Code and ChatGPT when offered) and DCR (needed by Gemini CLI, which has no CIMD support, and relied on by Cursor, Copilot CLI, Devin and Perplexity).
 3. **Live endpoint and well-known routes.** `https://frameos.studio/mcp` and `https://frameos.studio/.well-known/oauth-protected-resource/mcp` must be served (the frontend rewrite merged and the connector origin configured).
-4. **End-to-end check** on at least one host with a real account.
+4. **Launch guardrails** (owner decision, 2026-10-02). The connector is open to every FrameOS plan, with credits as the only gate. Two server-side checks must ship first:
+   - A render starts only when the balance covers the video. The check runs at submit when the length is known; otherwise the worker checks right after download and fails with `(insufficient_credits)`, charging nothing.
+   - At most 3 renders process at once per workspace. Over the limit, the server returns 429.
+
+   The exact messages are specified in the MCP connector owner's task list. The skills and `dev/mock_server.py` already follow them; switch them off in the mock with `FRAMEOS_MOCK_GUARDRAILS=0`.
+5. **End-to-end check** on at least one host with a real account.
 
 Which clients ask for `frameos:mcp` on their own (from client source and docs; not yet confirmed against the live server):
 

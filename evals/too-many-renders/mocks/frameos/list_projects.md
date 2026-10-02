@@ -1,0 +1,53 @@
+[
+  {
+    "id": "3b8e1f0a-6c2d-4e95-a7b4-0d9c2e1f3a86",
+    "title": "Episode 113 - Hiring your first editor",
+    "status": "processing",
+    "progress": 52,
+    "etaRemainingSeconds": 900,
+    "processingMessage": "rendering 3 clips",
+    "source": "https://www.youtube.com/watch?v=3b8e1f0a-6c",
+    "sourceType": "url",
+    "filename": "Episode 113 - Hiring your first editor",
+    "thumbnailUrl": null,
+    "durationSec": null,
+    "errorMessage": null,
+    "createdAt": "2026-10-02T08:10:00Z",
+    "clipCount": 0,
+    "clips": []
+  },
+  {
+    "id": "e7a2c9d4-1f6b-4b30-8e5d-2c4a9f0b1d73",
+    "title": "Founder AMA, September",
+    "status": "processing",
+    "progress": 10,
+    "etaRemainingSeconds": 900,
+    "processingMessage": "transcribing",
+    "source": "https://www.youtube.com/watch?v=e7a2c9d4-1f",
+    "sourceType": "url",
+    "filename": "Founder AMA, September",
+    "thumbnailUrl": null,
+    "durationSec": null,
+    "errorMessage": null,
+    "createdAt": "2026-10-02T08:10:00Z",
+    "clipCount": 0,
+    "clips": []
+  },
+  {
+    "id": "5d0f3a8c-9e1b-4c62-b4f7-6a1e8d2c0b59",
+    "title": "Webinar: pricing pages that convert",
+    "status": "processing",
+    "progress": 5,
+    "etaRemainingSeconds": 900,
+    "processingMessage": "downloading source",
+    "source": "https://www.youtube.com/watch?v=5d0f3a8c-9e",
+    "sourceType": "url",
+    "filename": "Webinar: pricing pages that convert",
+    "thumbnailUrl": null,
+    "durationSec": null,
+    "errorMessage": null,
+    "createdAt": "2026-10-02T08:10:00Z",
+    "clipCount": 0,
+    "clips": []
+  }
+]

@@ -469,6 +469,65 @@ def _free_port() -> int:
 
 
 @unittest.skipIf(mock is None, SKIP_REASON)
+class GuardrailTest(unittest.IsolatedAsyncioTestCase):
+    """Launch guardrails agreed on 2026-10-02: balance covers the video, at most 3 renders at once."""
+
+    call, error, poll = FlowTest.call, FlowTest.error, FlowTest.poll
+
+    async def test_three_renders_at_once_then_429(self):
+        server, _ = _new_server(credits=1000)
+        async with Client(server, mode="legacy") as client:
+            jobs = []
+            for i in range(3):
+                submitted = await self.call(client, "submit_video", source_url=f"https://www.youtube.com/watch?v=cap{i}")
+                jobs.append(submitted["job"]["job_id"])
+            text = await self.error(client, "submit_video", source_url="https://www.youtube.com/watch?v=cap3")
+            self.assertIn("FrameOS returned HTTP 429: 3 videos are already processing in this workspace (limit 3). "
+                          "Wait for one to finish, then submit again.", text)
+            # Re-submitting a link that is already rendering is still answered, not refused.
+            again = await self.call(client, "submit_video", source_url="https://www.youtube.com/watch?v=cap0")
+            self.assertEqual(again["job"]["status"], "already_running")
+            await self.poll(client, jobs[0])
+            await self.call(client, "submit_video", source_url="https://www.youtube.com/watch?v=cap3")
+
+    async def test_stray_rows_from_a_failed_start_do_not_count(self):
+        server, state = _new_server(credits=0)
+        async with Client(server, mode="legacy") as client:
+            for i in range(4):
+                text = await self.error(client, "submit_video", source_url=f"https://www.youtube.com/watch?v=stray{i}")
+                self.assertIn("HTTP 402: Out of credits", text)
+
+    async def test_known_length_must_be_covered_at_submit(self):
+        server, state = _new_server(credits=5)
+        async with Client(server, mode="legacy") as client:
+            text = await self.error(client, "submit_video", source_url="https://vimeo.com/76979871")
+            project = next(p for p in state.projects.values() if p.source.endswith("76979871"))
+            needed = -(-int(project.sim_duration) // 60)
+            self.assertIn(f"FrameOS returned HTTP 402: This video is {needed} minutes long and needs {needed} "
+                          f"credits, but your workspace has 5. Add credits or use a shorter video.", text)
+            self.assertEqual((await self.call(client, "whoami"))["account"]["credits"], 5)
+
+    async def test_unknown_length_fails_after_download_without_charge(self):
+        server, state = _new_server(credits=5)
+        async with Client(server, mode="legacy") as client:
+            submitted = await self.call(client, "submit_video", source_url="https://www.youtube.com/watch?v=long01")
+            seen = await self.poll(client, submitted["job"]["job_id"])
+            self.assertEqual(seen[-1]["state"], "failed")
+            self.assertTrue(seen[-1]["message"].endswith("Nothing was charged. (insufficient_credits)"))
+            self.assertIn("but your workspace has 5.", seen[-1]["message"])
+            self.assertNotIn("transcribing", [v["message"] for v in seen])
+            listed = (await self.call(client, "list_projects"))[0]
+            self.assertTrue(listed["errorMessage"].endswith("(insufficient_credits)"))
+            self.assertEqual((await self.call(client, "whoami"))["account"]["credits"], 5)
+
+    async def test_guardrails_can_be_switched_off(self):
+        state = mock.MockState(mock.MockConfig.from_env({"FRAMEOS_MOCK_GUARDRAILS": "0", "FRAMEOS_MOCK_CREDITS": "1000"}))
+        async with Client(mock.create_server(state), mode="legacy") as client:
+            for i in range(4):
+                await self.call(client, "submit_video", source_url=f"https://www.youtube.com/watch?v=off{i}")
+
+
+@unittest.skipIf(mock is None, SKIP_REASON)
 class TransportTest(unittest.IsolatedAsyncioTestCase):
     """The real entry point as a subprocess, over stdio and Streamable HTTP."""
 
