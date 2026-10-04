@@ -2,7 +2,7 @@
 
 One submission lists FrameOS in both ChatGPT and Codex. Portal: https://platform.openai.com/plugins > **Upload new or existing plugin**.
 
-**Blocked until** the connector is live and sign-in works ([status](../status.md)), every tool declares all three annotations (below), and the domain-verification route exists.
+**Blocked until** ChatGPT can sign in and the domain-verification route exists. The connector is live, but only pre-registered clients are admitted and only Claude Code is registered so far, so ChatGPT is not enabled yet ([status](../status.md)). Every tool now declares all three annotations (below).
 
 ## 1. Access and identity
 
@@ -49,19 +49,19 @@ Note: Codex's bundled `validate_plugin.py` lint predates the portal schema and r
 ChatGPT's OAuth expectations:
 
 - ChatGPT prefers CIMD with client ID `https://chatgpt.com/oauth/client.json` (redirect `https://chatgpt.com/connector_platform_oauth_redirect`). Its document defaults to `private_key_jwt` but also supports `none`; Clerk's overlap is `none` (public client with PKCE). DCR is used when a `registration_endpoint` exists.
-- ChatGPT uses the stable redirect above only if the sign-in server returns `iss` and the connector's `authorization_servers` entry **exactly** matches Clerk's `issuer`. Today the connector publishes a trailing slash that Clerk's issuer lacks; this is for the MCP connector owner to fix. Otherwise ChatGPT falls back to `https://chatgpt.com/connector/oauth/{callback_id}`.
+- ChatGPT uses the stable redirect above only if the sign-in server returns `iss` and the connector's `authorization_servers` entry **exactly** matches Clerk's `issuer`. Otherwise ChatGPT falls back to `https://chatgpt.com/connector/oauth/{callback_id}`. The trailing slash that used to break the match is fixed: as of 2026-10-05 the connector publishes `https://clerk.frameos.studio`, the same as Clerk's `issuer`.
 - ChatGPT requests the OpenID scopes the sign-in server advertises, so `frameos:mcp` must be a Clerk default scope.
 - Optional: marking `whoami` as a profile tool (`_meta["openai/profile"]: true`) improves account labels when users connect more than one account.
 
 ## 5. Tool annotations
 
-The portal requires explicit `readOnlyHint`, `openWorldHint` and `destructiveHint` on **every** tool, each with a justification. Current values come from [`tests/fixtures/mcp-snapshot.json`](../../tests/fixtures/mcp-snapshot.json); the proposal is for the MCP connector owner to confirm (annotations live in the connector, not in this repo).
+The portal requires explicit `readOnlyHint`, `openWorldHint` and `destructiveHint` on **every** tool, each with a justification. Current values come from [`tests/fixtures/mcp-snapshot.json`](../../tests/fixtures/mcp-snapshot.json) (the backend's main branch, 2026-10-03), where every tool now sets all three and has a `title`. The proposal is for the MCP connector owner to confirm (annotations live in the connector, not in this repo). Three proposals still differ from the current values: `set_caption_style` and `recaption_clip` (`destructiveHint` is false today) and `generate_social_copy` (`readOnlyHint` is false today).
 
-Key: RO = readOnlyHint, D = destructiveHint, OW = openWorldHint; "-" = not set.
+Key: RO = readOnlyHint, D = destructiveHint, OW = openWorldHint.
 
 | Tool | Current RO / D / OW | Proposed RO / D / OW | Justification |
 |---|---|---|---|
-| `whoami`, `get_usage`, `get_brand`, `list_projects`, `get_project`, `get_job`, `get_transcript`, `list_clips`, `describe_clip`, `list_collections`, `list_clips_in_collection`, `get_thumbnail_job`, `list_thumbnails`, `list_social_accounts` | true / - / false | true / false / false | Only read data in the connected FrameOS workspace. |
+| `whoami`, `get_usage`, `get_brand`, `list_projects`, `get_project`, `get_job`, `get_transcript`, `list_clips`, `describe_clip`, `list_collections`, `list_clips_in_collection`, `get_thumbnail_job`, `list_thumbnails`, `list_social_accounts` | true / false / false | true / false / false | Only read data in the connected FrameOS workspace. |
 | `submit_video` | false / false / true | false / false / true | Creates a project and spends credits; fetches the public link the user gave. Changes no existing data. |
 | `submit_uploaded_video` | false / false / false | false / false / false | Creates a project from the user's own upload and spends credits. |
 | `create_upload_link` | false / false / false | false / false / false | Issues a one-hour upload URL; changes no existing data. |
@@ -71,7 +71,7 @@ Key: RO = readOnlyHint, D = destructiveHint, OW = openWorldHint; "-" = not set.
 | `recaption_clip` | false / false / false | false / true / false | Re-renders a legacy clip and points it at the new file. |
 | `generate_social_copy` | false / false / false | true / false / false | Returns draft text and changes nothing (rate-limited to 30 per hour per workspace). |
 | `create_thumbnail_job` | false / false / true | false / false / true | Creates thumbnails and spends credits; can fetch a public video or style-reference URL. |
-| `post_clip` | false / false / true | false / true / true | Publishes publicly on a third-party platform; cannot be undone from FrameOS. |
+| `post_clip` | false / true / true | false / true / true | Publishes publicly on a third-party platform; cannot be undone from FrameOS. |
 
 ## 6. Review test cases
 

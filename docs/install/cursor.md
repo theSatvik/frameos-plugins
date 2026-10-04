@@ -7,7 +7,7 @@
 | [C. Cursor Marketplace](#c-cursor-marketplace) | The eight skills and the connector, once FrameOS is listed |
 | [D. Edit mcp.json by hand](#d-edit-mcpjson-by-hand) | The FrameOS connector |
 
-> **Not yet verified on a live account.** The FrameOS connector is not live as of 2026-10-02 ([status](../status.md)), and none of these routes has been tested in Cursor yet. Steps come from Cursor's documentation.
+> **Coming soon: Cursor can't sign in to FrameOS yet.** The FrameOS connector is live as of 2026-10-05, but its sign-in server only admits pre-registered apps for now, and so far only Claude Code is pre-registered ([status](../status.md)). None of these routes has been tested in Cursor yet. Steps come from Cursor's documentation.
 
 ## Requirements
 
@@ -71,6 +71,6 @@ You should see your workspace name and a credit number.
 
 ## Known limitations
 
-- Cursor asks FrameOS's sign-in server for the permissions that server advertises, unless a pre-registered client ID is configured. Until the FrameOS permission is advertised and on by default, sign-in can succeed but FrameOS will answer with a missing-permission error ([status](../status.md#prerequisites-before-any-host-can-connect)).
+- Cursor asks FrameOS's sign-in server for the permissions that server advertises, unless a pre-registered client ID is configured. The FrameOS permission is advertised as of 2026-10-05, but whether it is on by default is not confirmed; if Cursor's sign-in leaves it out, sign-in can succeed but FrameOS will answer with a missing-permission error ([status](../status.md#prerequisites-before-every-host-can-connect)).
 - Cursor registers itself automatically (Dynamic Client Registration), which FrameOS's sign-in server does not offer yet.
 - Cursor can upload a local video file for you, because its agent can run commands.

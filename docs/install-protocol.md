@@ -10,7 +10,8 @@ A user pasted something like "Install FrameOS by following this page". You are t
 - Don't edit config files by hand when a CLI command exists for the job.
 - Bound every wait. Never loop forever.
 - A "connected" status is not proof. Only a successful `whoami` call counts.
-- **As of 2026-10-02 the FrameOS connector is not live** ([status](status.md)). If sign-in or `whoami` fails because the endpoint is not found (HTTP 404), stop after installing and report that clearly. Don't keep retrying.
+- **As of 2026-10-05 the FrameOS connector is live, but only Claude Code can sign in** ([status](status.md)). Every other app is coming soon: its sign-in is not enabled yet. In any other app, install if the user wants the packages ready, then stop before sign-in and tell the user clearly that sign-in for their app is not enabled yet. Don't keep retrying.
+- In Claude Code, the path tested end to end is connecting the connector directly ([install/claude-code.md](install/claude-code.md), route A). Signing in through the plugin's own connection, `plugin:frameos:frameos`, has not been tested yet. If it fails, tell the user and point them to route A, which means uninstalling the plugin first so the tools aren't duplicated.
 
 ## Step 1. Identify the host
 

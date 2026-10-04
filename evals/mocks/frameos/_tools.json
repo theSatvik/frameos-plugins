@@ -50,10 +50,12 @@
         "type": "object",
         "title": "submit_videoArguments"
       },
-      "name": "submit_video"
+      "name": "submit_video",
+      "title": "Submit Video"
     },
     {
       "annotations": {
+        "destructiveHint": false,
         "openWorldHint": false,
         "readOnlyHint": true
       },
@@ -91,10 +93,12 @@
         ],
         "type": "object",
         "title": "list_projectsOutput"
-      }
+      },
+      "title": "List Projects"
     },
     {
       "annotations": {
+        "destructiveHint": false,
         "openWorldHint": false,
         "readOnlyHint": true
       },
@@ -112,10 +116,12 @@
         "type": "object",
         "title": "get_projectArguments"
       },
-      "name": "get_project"
+      "name": "get_project",
+      "title": "Get Project"
     },
     {
       "annotations": {
+        "destructiveHint": false,
         "openWorldHint": false,
         "readOnlyHint": true
       },
@@ -133,10 +139,12 @@
         "type": "object",
         "title": "get_jobArguments"
       },
-      "name": "get_job"
+      "name": "get_job",
+      "title": "Get Job"
     },
     {
       "annotations": {
+        "destructiveHint": false,
         "openWorldHint": false,
         "readOnlyHint": true
       },
@@ -171,10 +179,12 @@
         ],
         "type": "object",
         "title": "list_clipsOutput"
-      }
+      },
+      "title": "List Clips"
     },
     {
       "annotations": {
+        "destructiveHint": false,
         "openWorldHint": false,
         "readOnlyHint": true
       },
@@ -184,10 +194,12 @@
         "type": "object",
         "title": "whoamiArguments"
       },
-      "name": "whoami"
+      "name": "whoami",
+      "title": "Whoami"
     },
     {
       "annotations": {
+        "destructiveHint": false,
         "openWorldHint": false,
         "readOnlyHint": true
       },
@@ -197,10 +209,12 @@
         "type": "object",
         "title": "get_usageArguments"
       },
-      "name": "get_usage"
+      "name": "get_usage",
+      "title": "Get Usage"
     },
     {
       "annotations": {
+        "destructiveHint": false,
         "openWorldHint": false,
         "readOnlyHint": true
       },
@@ -218,10 +232,12 @@
         "type": "object",
         "title": "describe_clipArguments"
       },
-      "name": "describe_clip"
+      "name": "describe_clip",
+      "title": "Describe Clip"
     },
     {
       "annotations": {
+        "destructiveHint": false,
         "openWorldHint": false,
         "readOnlyHint": true
       },
@@ -271,10 +287,12 @@
         "type": "object",
         "title": "get_transcriptArguments"
       },
-      "name": "get_transcript"
+      "name": "get_transcript",
+      "title": "Get Transcript"
     },
     {
       "annotations": {
+        "destructiveHint": false,
         "openWorldHint": false,
         "readOnlyHint": true
       },
@@ -284,7 +302,8 @@
         "type": "object",
         "title": "get_brandArguments"
       },
-      "name": "get_brand"
+      "name": "get_brand",
+      "title": "Get Brand"
     },
     {
       "annotations": {
@@ -331,7 +350,8 @@
         "type": "object",
         "title": "export_clipArguments"
       },
-      "name": "export_clip"
+      "name": "export_clip",
+      "title": "Export Clip"
     },
     {
       "annotations": {
@@ -354,10 +374,12 @@
         "type": "object",
         "title": "duplicate_clipArguments"
       },
-      "name": "duplicate_clip"
+      "name": "duplicate_clip",
+      "title": "Duplicate Clip"
     },
     {
       "annotations": {
+        "destructiveHint": false,
         "openWorldHint": false,
         "readOnlyHint": true
       },
@@ -384,7 +406,8 @@
         ],
         "type": "object",
         "title": "list_collectionsOutput"
-      }
+      },
+      "title": "List Collections"
     },
     {
       "annotations": {
@@ -407,7 +430,8 @@
         "type": "object",
         "title": "create_collectionArguments"
       },
-      "name": "create_collection"
+      "name": "create_collection",
+      "title": "Create Collection"
     },
     {
       "annotations": {
@@ -435,10 +459,12 @@
         "type": "object",
         "title": "add_clip_to_collectionArguments"
       },
-      "name": "add_clip_to_collection"
+      "name": "add_clip_to_collection",
+      "title": "Add Clip To Collection"
     },
     {
       "annotations": {
+        "destructiveHint": false,
         "openWorldHint": false,
         "readOnlyHint": true
       },
@@ -473,7 +499,8 @@
         ],
         "type": "object",
         "title": "list_clips_in_collectionOutput"
-      }
+      },
+      "title": "List Clips In Collection"
     },
     {
       "annotations": {
@@ -496,7 +523,8 @@
         "type": "object",
         "title": "export_collectionArguments"
       },
-      "name": "export_collection"
+      "name": "export_collection",
+      "title": "Export Collection"
     },
     {
       "annotations": {
@@ -524,7 +552,8 @@
         "type": "object",
         "title": "create_upload_linkArguments"
       },
-      "name": "create_upload_link"
+      "name": "create_upload_link",
+      "title": "Create Upload Link"
     },
     {
       "annotations": {
@@ -576,7 +605,8 @@
         "type": "object",
         "title": "submit_uploaded_videoArguments"
       },
-      "name": "submit_uploaded_video"
+      "name": "submit_uploaded_video",
+      "title": "Submit Uploaded Video"
     },
     {
       "annotations": {
@@ -617,7 +647,8 @@
         "type": "object",
         "title": "set_caption_styleArguments"
       },
-      "name": "set_caption_style"
+      "name": "set_caption_style",
+      "title": "Set Caption Style"
     },
     {
       "annotations": {
@@ -658,7 +689,8 @@
         "type": "object",
         "title": "recaption_clipArguments"
       },
-      "name": "recaption_clip"
+      "name": "recaption_clip",
+      "title": "Recaption Clip"
     },
     {
       "annotations": {
@@ -731,10 +763,12 @@
         "type": "object",
         "title": "create_thumbnail_jobArguments"
       },
-      "name": "create_thumbnail_job"
+      "name": "create_thumbnail_job",
+      "title": "Create Thumbnail Job"
     },
     {
       "annotations": {
+        "destructiveHint": false,
         "openWorldHint": false,
         "readOnlyHint": true
       },
@@ -752,10 +786,12 @@
         "type": "object",
         "title": "get_thumbnail_jobArguments"
       },
-      "name": "get_thumbnail_job"
+      "name": "get_thumbnail_job",
+      "title": "Get Thumbnail Job"
     },
     {
       "annotations": {
+        "destructiveHint": false,
         "openWorldHint": false,
         "readOnlyHint": true
       },
@@ -788,10 +824,12 @@
         ],
         "type": "object",
         "title": "list_thumbnailsOutput"
-      }
+      },
+      "title": "List Thumbnails"
     },
     {
       "annotations": {
+        "destructiveHint": false,
         "openWorldHint": false,
         "readOnlyHint": true
       },
@@ -818,7 +856,8 @@
         ],
         "type": "object",
         "title": "list_social_accountsOutput"
-      }
+      },
+      "title": "List Social Accounts"
     },
     {
       "annotations": {
@@ -859,11 +898,12 @@
         "type": "object",
         "title": "generate_social_copyArguments"
       },
-      "name": "generate_social_copy"
+      "name": "generate_social_copy",
+      "title": "Generate Social Copy"
     },
     {
       "annotations": {
-        "destructiveHint": false,
+        "destructiveHint": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false
@@ -907,7 +947,8 @@
         "type": "object",
         "title": "post_clipArguments"
       },
-      "name": "post_clip"
+      "name": "post_clip",
+      "title": "Post Clip"
     }
   ]
 }

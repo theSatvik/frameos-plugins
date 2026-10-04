@@ -2,7 +2,7 @@
 
 You get the eight FrameOS skills plus the FrameOS connector in the Codex CLI.
 
-> **Not yet verified on a live account.** The FrameOS connector is not live as of 2026-10-02 ([status](../status.md)). Installing works today (checked locally with codex-cli 0.152.0, in an isolated `CODEX_HOME`); `codex mcp login frameos` fails until the connector launches.
+> **Coming soon: Codex can't sign in to FrameOS yet.** The FrameOS connector is live as of 2026-10-05, but its sign-in server only admits pre-registered apps for now, and so far only Claude Code is pre-registered ([status](../status.md)). Installing works today (checked locally with codex-cli 0.152.0, in an isolated `CODEX_HOME`); `codex mcp login frameos` won't succeed until Codex is enabled.
 
 ## Requirements
 

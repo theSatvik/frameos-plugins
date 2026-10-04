@@ -8,7 +8,7 @@ There are three ways in. Pick one:
 | [B. Custom connector](#b-add-a-custom-connector-by-url) | The FrameOS tools only | Free plan, or when plugins are not available to you |
 | [C. Skill upload](#c-upload-individual-skills) | One or more skills, no connector | Adding skills next to route B |
 
-> **Not yet verified on a live account.** The FrameOS connector is not live as of 2026-10-02 ([status](../status.md)), and none of these routes has been tested on claude.ai yet. Menu names below come from Anthropic's documentation.
+> **Coming soon: claude.ai, Claude Desktop and Cowork can't sign in to FrameOS yet.** The FrameOS connector is live as of 2026-10-05, but its sign-in server only admits pre-registered apps for now, and so far only Claude Code is pre-registered ([status](../status.md)). None of these routes has been tested on claude.ai yet. Menu names below come from Anthropic's documentation.
 
 Everything you add on claude.ai is saved to your account, so it also works in Claude Desktop and Cowork.
 

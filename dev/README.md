@@ -2,7 +2,7 @@
 
 `dev/mock_server.py` is a single-file, stateful stand-in for the FrameOS MCP server. Use it to demo the skills end to end, develop new ones, or run the test suite without a FrameOS account, without credentials and without spending credits.
 
-It exposes the same 27 tools as the real server, with identical names, parameters, defaults, enums, annotations and descriptions (`tests/test_mock_server.py` checks this against `tests/fixtures/mcp-snapshot.json`). Behind the tools is an in-memory fake of the FrameOS API that returns the real response shapes and error strings: jobs move through the real progress messages, renders charge credits, exports start burn jobs, and posts finish with a link.
+It exposes the same 27 tools as the real server, with identical names, titles, parameters, defaults, enums, annotations and descriptions (`tests/test_mock_server.py` checks this against `tests/fixtures/mcp-snapshot.json`). Behind the tools is an in-memory fake of the FrameOS API that returns the real response shapes and error strings: jobs move through the real progress messages, renders charge credits, exports start burn jobs, and posts finish with a link.
 
 Nothing leaves your machine. Media, preview, thumbnail and post links all point at `https://mock.frameos.invalid/...`, a reserved domain that never resolves. Upload links point at the mock itself, so the local-file flow works with `curl`.
 
@@ -30,7 +30,7 @@ claude --plugin-dir . --mcp-config dev/mock.mcp.json --strict-mcp-config
 
 - `--plugin-dir .` loads this repo as the `frameos` plugin, including the eight skills.
 - `dev/mock.mcp.json` starts the mock over stdio as a server named `frameos`. It uses a relative path, so launch `claude` from the repo root.
-- `--strict-mcp-config` keeps only the mock. Without it, Claude Code also loads the plugin's own server and the root `.mcp.json`, which both point at the real endpoint and fail to connect.
+- `--strict-mcp-config` keeps only the mock. Without it, Claude Code also loads the plugin's own server and the root `.mcp.json`, which both point at the real FrameOS endpoint rather than the mock.
 
 For a headless run, put the prompt before `--mcp-config`. That flag takes several files, so anything after it that isn't another flag is read as a file name:
 
@@ -127,7 +127,7 @@ Errors surface as tool errors with the real server's text, `FrameOS returned HTT
 | `FRAMEOS_MOCK_SEED` | `1` | `0` starts with no projects. By default there is one older project with burned-in captions, no stored transcript, and one stale clip. |
 | `FRAMEOS_MOCK_SOCIAL` | `1` | `0` starts with no connected social accounts. By default there is one each for YouTube, Instagram, LinkedIn and Facebook. |
 | `FRAMEOS_MOCK_BRAND_LOGO` | `0` | `1` makes `get_brand` return a logo. |
-| `FRAMEOS_MOCK_ERRORS` | `detailed` | `opaque` reproduces what today's real server shows (see below). |
+| `FRAMEOS_MOCK_ERRORS` | `detailed` | `opaque` is a legacy option: it reproduces the bare errors the real server showed before it switched to `ToolError` (see below). |
 | `FRAMEOS_MOCK_GUARDRAILS` | on | The launch guardrails: a render starts only when the balance covers the video (402 at submit when the length is known, `(insufficient_credits)` after download otherwise), and at most `FRAMEOS_MOCK_MAX_CONCURRENT` renders run at once (429). Set `0` to switch them off. |
 | `FRAMEOS_MOCK_MAX_CONCURRENT` | `3` | The render limit per workspace. |
 | `FRAMEOS_MOCK_UPLOAD_PORT` | `0` | stdio mode only: the port for the upload receiver (`0` = any free port). In HTTP mode, uploads go to the same port as `/mcp`. |
@@ -156,11 +156,11 @@ The skills have to cope with these, so the mock keeps them:
 - **Transcripts.** `get_transcript` takes milliseconds and returns seconds.
 - **Focus prompt.** `focus_prompt` is silently cut to 400 characters and matched on words.
 
-## Error text: an open issue in the real server
+## Error text: fixed in the real server
 
-The real server raises `RuntimeError("FrameOS returned HTTP ...")`. The mcp 2.2.0 SDK treats any exception other than `ToolError` as a crash and shows the client only `Error executing tool <name>`, so the FrameOS detail never reaches the agent. This was reproduced against a scratch copy of the real `server.py` on 2026-10-02.
+The real server used to raise `RuntimeError("FrameOS returned HTTP ...")`. The mcp 2.2.0 SDK treats any exception other than `ToolError` as a crash and shows the client only `Error executing tool <name>`, so the FrameOS detail never reached the agent. This was reproduced against a scratch copy of the real `server.py` on 2026-10-02.
 
-The mock raises `ToolError` by default, which is what the real server would do once it switches to `ToolError`. Set `FRAMEOS_MOCK_ERRORS=opaque` to see today's real behaviour.
+The real server now raises `ToolError`, so agents see `FrameOS returned HTTP <code>: <detail>`. The mock does the same by default. `FRAMEOS_MOCK_ERRORS=opaque` keeps the old bare `Error executing tool <name>` as a legacy option, for checking that the skills still cope when an error carries no detail.
 
 ## What the mock does not simulate
 

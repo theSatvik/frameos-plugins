@@ -2,7 +2,7 @@
 
 The repo is a Gemini CLI extension: you get the eight skills, the FrameOS connector, a short always-on context file and eight `/frameos:*` commands.
 
-> **Not yet verified.** The FrameOS connector is not live as of 2026-10-02 ([status](../status.md)), and Gemini CLI was not installed on the machine these packages were built on, so this extension has not been loaded in Gemini CLI yet. Steps come from Gemini CLI's documentation and source.
+> **Coming soon: Gemini CLI can't sign in to FrameOS yet.** The FrameOS connector is live as of 2026-10-05, but its sign-in server only admits pre-registered apps for now, and so far only Claude Code is pre-registered ([status](../status.md)). Gemini CLI was also not installed on the machine these packages were built on, so this extension has not been loaded in Gemini CLI yet. Steps come from Gemini CLI's documentation and source.
 
 ## Requirements
 
@@ -62,7 +62,7 @@ Anything you type after the command is passed along, for example `/frameos:clip 
 ## Sign in again or fix the connection
 
 - Tokens expired: run `/mcp auth frameos` again.
-- A "missing permission" (403) error: run `/mcp auth frameos` again after the FrameOS permission is available ([status](../status.md#prerequisites-before-any-host-can-connect)).
+- A "missing permission" (403) error: run `/mcp auth frameos` again after the FrameOS permission is available ([status](../status.md#prerequisites-before-every-host-can-connect)).
 
 ## Update or remove
 
@@ -92,6 +92,6 @@ This writes to `.gemini/settings.json` (add `-s user` for `~/.gemini/settings.js
 
 ## Known limitations
 
-- Gemini CLI registers itself with Dynamic Client Registration and does not support Client ID Metadata Documents, so it needs DCR turned on for FrameOS's sign-in server ([status](../status.md#prerequisites-before-any-host-can-connect)).
+- Gemini CLI registers itself with Dynamic Client Registration and does not support Client ID Metadata Documents, so it needs DCR turned on for FrameOS's sign-in server ([status](../status.md#prerequisites-before-every-host-can-connect)).
 - Gemini CLI checks the sign-in server's issuer strictly; this has not been tested against FrameOS's sign-in server yet.
 - Gemini CLI can upload a local video file for you, because it can run commands.

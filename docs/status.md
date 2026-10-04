@@ -1,43 +1,53 @@
 # Status
 
-Last checked: **2026-10-02**. Package version: see [`VERSION`](../VERSION).
+Last checked: **2026-10-05**. Package version: see [`VERSION`](../VERSION).
 
 ## In one paragraph
 
-The packages in this repo are written and load locally in Claude Code and Codex. The hosted FrameOS connector they point at, `https://frameos.studio/mcp`, is **not live yet**, so no host can sign in or run a FrameOS action today. Nothing has been tested against a live FrameOS account on any host. Every install guide marks what is unverified. Until the connector launches, use the [mock server](../dev/README.md) to try the workflows.
+The hosted FrameOS connector, `https://frameos.studio/mcp`, is **live**, and **Claude Code is the first app that can sign in**. On 2026-10-05 a real end-to-end test passed in Claude Code with the connector added directly: sign-in, consent, then `whoami` and `list_projects` returned the account's real data. Every other app (claude.ai and Claude Desktop, ChatGPT, Codex, Cursor, Gemini CLI, VS Code and Copilot, Perplexity) is **coming soon**: FrameOS's sign-in server only admits pre-registered apps for now, and so far only Claude Code is pre-registered. The packages in this repo load locally in Claude Code and Codex. Signing in through the Claude Code plugin's own connection has not been tested yet. Every install guide marks what is unverified, and the [mock server](../dev/README.md) still lets you try every workflow without spending credits.
 
 ## The hosted connector
 
-Probed with `curl` on 2026-10-02:
+Probed with `curl` on 2026-10-05:
 
 | URL | Result |
 |---|---|
-| `https://frameos.studio/mcp` | 404 |
-| `https://frameos.studio/.well-known/oauth-protected-resource/mcp` | 404 |
-| `https://clerk.frameos.studio/.well-known/oauth-authorization-server` | 200, but see below |
+| `https://frameos.studio/mcp` | 401 without a token. `WWW-Authenticate` carries `resource_metadata="https://frameos.studio/.well-known/oauth-protected-resource/mcp"` and `scope="frameos:mcp"` |
+| `https://frameos.studio/.well-known/oauth-protected-resource/mcp` | 200. `resource` is `https://frameos.studio/mcp`; `authorization_servers` is `https://clerk.frameos.studio`, with no trailing slash |
+| `https://clerk.frameos.studio/.well-known/oauth-authorization-server` | 200, see below |
 
-The connector itself (27 tools) is implemented as part of the FrameOS MCP connector work, but it is not deployed. The sign-in server (Clerk) answers, but it is not ready for agent sign-in yet:
+The sign-in server (Clerk OAuth) is set up for agent sign-in, with one limit:
 
-- Its `scopes_supported` does not list `frameos:mcp`, the scope the connector requires on every token.
+- Its `scopes_supported` lists `frameos:mcp`, the scope the connector requires on every token.
+- It advertises `client_id_metadata_document_supported: true`, so Client ID Metadata Documents (CIMD) are on. Admission is set to **"Pre-registered clients only"**: an app can sign in only after its CIMD client has been registered with FrameOS. So far only Claude Code is.
 - It has no `registration_endpoint`, so Dynamic Client Registration (DCR) is off.
-- It does not advertise `client_id_metadata_document_supported`, so Client ID Metadata Documents (CIMD) are off.
-- It does advertise S256 PKCE and `authorization_response_iss_parameter_supported: true`, which several clients need.
+- It advertises S256 PKCE, `none` among its token endpoint auth methods, and `authorization_response_iss_parameter_supported: true`, which several clients need.
 
-## Prerequisites before any host can connect
+### Fixed since the 2026-10-02 check
+
+- The connector and its well-known route are served. Both returned 404 on 2026-10-02.
+- Clerk advertises `frameos:mcp` and publishes CIMD.
+- The 401 `WWW-Authenticate` header now carries `scope="frameos:mcp"`.
+- The connector's sign-in server entry no longer has a trailing slash, so it matches Clerk's `issuer` exactly.
+- A `421 Invalid Host` error, caused by Cloud Run serving the connector under two hostnames, was fixed in production, and the deploy workflow now sets both hostnames on every deploy (merged and deployed 2026-10-05).
+- Error details reach the agent. Tools now raise the MCP SDK's `ToolError`, so the agent sees `FrameOS returned HTTP <code>: <detail>` instead of only `Error executing tool <name>`.
+- Every tool has a `title` and sets `readOnlyHint`, `destructiveHint` and `openWorldHint` explicitly. `post_clip` is marked destructive.
+
+## Prerequisites before every host can connect
 
 These are owned by the MCP connector work, not by this repo:
 
-1. **Clerk scope.** Create the `frameos:mcp` scope, advertise it, assign it to the OAuth applications that may request it, and add it to the default scopes for dynamic clients. Several clients only request scopes the sign-in server advertises (table below).
-2. **Clerk client onboarding.** Turn on CIMD (used by Claude's apps, Claude Code, Codex, VS Code and ChatGPT when offered) and DCR (needed by Gemini CLI, which has no CIMD support, and relied on by Cursor, Copilot CLI, Devin and Perplexity).
-3. **Live endpoint and well-known routes.** `https://frameos.studio/mcp` and `https://frameos.studio/.well-known/oauth-protected-resource/mcp` must be served (the frontend rewrite merged and the connector origin configured).
-4. **Launch guardrails** (owner decision, 2026-10-02). The connector is open to every FrameOS plan, with credits as the only gate. Two server-side checks must ship first:
+1. **Clerk scope.** Done: `frameos:mcp` is created and advertised. It is also in the default scopes for dynamic clients, which the clients marked below need.
+2. **Clerk client onboarding.** Partly done. CIMD is on, but only pre-registered clients are admitted, and only Claude Code is registered. Each other app is enabled once its CIMD client is pre-registered or admission is opened. DCR is not enabled: Gemini CLI has no CIMD support and needs it (or a pre-registered client), and Cursor, Copilot CLI, Devin and Perplexity rely on it.
+3. **Live endpoint and well-known routes.** Done.
+4. **Launch guardrails** (owner decision, 2026-10-02). **Still in progress on the server.** The connector is open to every FrameOS plan, with credits as the only gate. Two server-side checks:
    - A render starts only when the balance covers the video. The check runs at submit when the length is known; otherwise the worker checks right after download and fails with `(insufficient_credits)`, charging nothing.
    - At most 3 renders process at once per workspace. Over the limit, the server returns 429.
 
    The exact messages are specified in the MCP connector owner's task list. The skills and `dev/mock_server.py` already follow them; switch them off in the mock with `FRAMEOS_MOCK_GUARDRAILS=0`.
-5. **End-to-end check** on at least one host with a real account.
+5. **End-to-end check.** Done for Claude Code on 2026-10-05 (sign-in, `whoami` and `list_projects`). Each other host needs one after it is enabled.
 
-Which clients ask for `frameos:mcp` on their own (from client source and docs; not yet confirmed against the live server):
+Which clients ask for `frameos:mcp` on their own (from client source and docs; confirmed against the live server only for Claude Code, which got the scope with the connector added directly and no scope configured):
 
 | Client | Where it takes scopes from | What this repo does about it |
 |---|---|---|
@@ -52,15 +62,15 @@ Which clients ask for `frameos:mcp` on their own (from client source and docs; n
 
 | Host | Package loads | Sign-in | Live account end to end |
 |---|---|---|---|
-| Claude Code 2.1.282 | Yes, locally: `claude plugin validate --strict` passes for the marketplace and the plugin; marketplace add and install in an isolated config load all 8 skills and the connector | Request shape only: against a local fake server, Claude Code asked for `frameos:mcp offline_access` | Not yet |
-| Codex CLI 0.152.0 | Yes, locally: marketplace add and plugin add in an isolated `CODEX_HOME`; all 8 skills reach the model's prompt | Not yet (`codex mcp login` fails while the endpoint is 404) | Not yet |
-| Claude.ai, Desktop, Cowork | Not yet verified. Whether **Add marketplace** accepts a repo whose root is the plugin is unconfirmed | Not yet | Not yet |
-| ChatGPT | Not yet verified | Not yet | Not yet |
-| Cursor | Not yet verified | Not yet | Not yet |
-| Gemini CLI | Not yet verified (not installed on the test machine) | Not yet | Not yet |
-| VS Code and GitHub Copilot | Not yet verified | Not yet | Not yet |
-| Perplexity | Not yet verified | Not yet | Not yet |
-| Devin and Windsurf | Not yet verified | Not yet | Not yet |
+| Claude Code | Yes, locally with 2.1.282: `claude plugin validate --strict` passes for the marketplace and the plugin; marketplace add and install in an isolated config load all 8 skills and the connector | Yes, on 2026-10-05, with the connector added directly (`claude mcp add --transport http -s user frameos https://frameos.studio/mcp`, then `claude mcp login frameos`). Not yet tested through the plugin's own connection, `plugin:frameos:frameos` | Yes, on 2026-10-05, for `whoami` and `list_projects`: both returned the account's real data |
+| Codex CLI 0.152.0 | Yes, locally: marketplace add and plugin add in an isolated `CODEX_HOME`; all 8 skills reach the model's prompt | Coming soon (not enabled yet) | Not yet |
+| Claude.ai, Desktop, Cowork | Not yet verified. Whether **Add marketplace** accepts a repo whose root is the plugin is unconfirmed | Coming soon (not enabled yet) | Not yet |
+| ChatGPT | Not yet verified | Coming soon (not enabled yet) | Not yet |
+| Cursor | Not yet verified | Coming soon (not enabled yet) | Not yet |
+| Gemini CLI | Not yet verified (not installed on the test machine) | Coming soon (not enabled yet) | Not yet |
+| VS Code and GitHub Copilot | Not yet verified | Coming soon (not enabled yet) | Not yet |
+| Perplexity | Not yet verified | Coming soon (not enabled yet) | Not yet |
+| Devin and Windsurf | Not yet verified | Coming soon (not enabled yet) | Not yet |
 | `npx skills` | Not yet verified | n/a | n/a |
 
 ## Open issues in the MCP connector
@@ -69,11 +79,8 @@ These were found while building the packages and are for the owner of the FrameO
 
 **Sign-in and directory readiness**
 
-- The connector publishes its sign-in server with a trailing slash (`https://clerk.frameos.studio/`), while Clerk's issuer has none. ChatGPT compares them exactly and would fall back to per-connection redirects.
-- The 401 `WWW-Authenticate` header carries no `scope="frameos:mcp"`, so clients that read the scope from the challenge cannot find it there.
-- No tool has a `title`, and write tools do not all declare `destructiveHint` (and `openWorldHint`) explicitly. Claude's and OpenAI's directories require these. Posting a clip is marked non-destructive even though a public post cannot be undone.
-- Clerk: create and advertise the scope, make it a default, enable CIMD and DCR, and test loopback redirect matching on random ports (Claude Code, Codex, VS Code).
-- Frontend: serve the connector routes, and later `/.well-known/openai-apps-challenge` (OpenAI portal domain check) and possibly `/.well-known/mcp-registry-auth` (MCP Registry) and `/.well-known/oauth-authorization-server` (Perplexity's documented discovery path).
+- Clerk: pre-register each app's CIMD client (or open admission), decide on DCR, and test loopback redirect matching on random ports for Codex and VS Code (it works for Claude Code).
+- Frontend: later, `/.well-known/openai-apps-challenge` (OpenAI portal domain check) and possibly `/.well-known/mcp-registry-auth` (MCP Registry) and `/.well-known/oauth-authorization-server` (Perplexity's documented discovery path).
 
 **Behaviour an agent can see**
 
@@ -91,9 +98,8 @@ These were found while building the packages and are for the owner of the FrameO
 12. A submit refused for zero credits still leaves an empty project, which is marked failed about 30 minutes later.
 13. Asking for 0 thumbnails produces 3; the count is silently reduced to what the balance affords; the "include face" option does nothing yet.
 14. Thumbnails made from an uploaded project fail after its render, because the uploaded source is deleted; making them from a clip works.
-15. Any positive balance lets a full render through, and the balance stops at zero.
+15. Any positive balance lets a full render through, and the balance stops at zero. The first launch guardrail above addresses this.
 16. A job ID that does not exist but looks valid reads as "pending" forever.
-17. Error details do not reach the agent today: the connector raises a generic exception, so the MCP SDK shows only `Error executing tool <name>` instead of the `FrameOS returned HTTP <code>: <detail>` text the skills read. The fix is to raise the SDK's tool-error type. The [mock server](../dev/README.md) shows the intended text by default and today's behaviour with `FRAMEOS_MOCK_ERRORS=opaque`.
 
 **Security.** Three security findings in the connector are handled privately with its owner. Details stay out of this public file until they are fixed; see [SECURITY.md](../SECURITY.md) for how to report issues.
 
@@ -102,9 +108,9 @@ These were found while building the packages and are for the owner of the FrameO
 ## How to re-check
 
 ```bash
-curl -s -o /dev/null -w '%{http_code}\n' https://frameos.studio/mcp
-curl -s -o /dev/null -w '%{http_code}\n' https://frameos.studio/.well-known/oauth-protected-resource/mcp
-curl -s https://clerk.frameos.studio/.well-known/oauth-authorization-server | python3 -m json.tool | grep -E 'scopes_supported|registration_endpoint|client_id_metadata' -A8
+curl -s -o /dev/null -D - https://frameos.studio/mcp | grep -i -E '^HTTP|www-authenticate'
+curl -s https://frameos.studio/.well-known/oauth-protected-resource/mcp | python3 -m json.tool
+curl -s https://clerk.frameos.studio/.well-known/oauth-authorization-server | python3 -m json.tool | grep -E 'issuer|scopes_supported|registration_endpoint|client_id_metadata' -A8
 ```
 
-When the first two return something other than 404, `frameos:mcp` appears in the scopes, and either `registration_endpoint` or `client_id_metadata_document_supported` is present, run each install guide's "Check it works" step and update the table above.
+Expect a 401 whose `WWW-Authenticate` carries `resource_metadata` and `scope="frameos:mcp"`, then a 200 from the well-known route. These checks can't show which apps are pre-registered. When the connector owner reports that an app's client is registered (or admission is opened, or a `registration_endpoint` appears for DCR-only apps such as Gemini CLI), run that app's install guide "Check it works" step and update the table above.

@@ -439,7 +439,8 @@ class FlowTest(unittest.IsolatedAsyncioTestCase):
             self.assertIn("newsletter", clips[0]["transcript"].lower())
             self.assertEqual(clips, sorted(clips, key=lambda c: -c["score"]))
 
-    async def test_opaque_error_mode_matches_todays_real_server(self):
+    async def test_opaque_error_mode_reproduces_the_legacy_bare_error(self):
+        """Legacy option: the bare error the real server showed before it switched to ToolError."""
         server, _ = _new_server(credits=0, errors="opaque")
         async with Client(server, mode="legacy") as client:
             with self.assertLogs("mcp.server.mcpserver.server", level="ERROR"):  # the SDK logs the crash

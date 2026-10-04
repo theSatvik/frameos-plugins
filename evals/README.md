@@ -85,7 +85,7 @@ Tool names below are the bare FrameOS tool names. Graders use the prefixed form 
 
 ## Known limits
 
-- The FrameOS MCP endpoint is not live yet, and the snapshot is from an uncommitted backend branch. The mocks follow that code. Re-check them when the server ships or the snapshot changes.
+- The snapshot is from the backend's main branch (2026-10-03), and the mocks follow that code. The live endpoint has so far been checked only with `whoami` and `list_projects` from Claude Code (2026-10-05), so the other mocks' response bodies are not yet compared with live responses. Re-check the mocks when the snapshot changes or more tools are run live.
 - `upload-local-file` cannot finish an upload. The eval sandbox has no route to storage, so the curl PUT always fails and `submit_uploaded_video` is never reached offline. The case grades the decision, the secrecy of the upload link and the honest report. If the submit step is ever reached, the mock's `gs_path` guard enforces the right path.
 - Each case is a single turn. The "user says yes, then the post goes out" step of publishing, and the "approve, then run" step of a content pack, are not covered. Both need a multi-turn `context.history_file` case.
 - Some values are placeholders where the backend defines the field but not its values: `sourceType`, thumbnail `template`/`role`, the user-facing failure sentence before the `(no_clips_found)` code, the `account` field of the `post_clip` reply, and the empty `message` of an in-progress export job.

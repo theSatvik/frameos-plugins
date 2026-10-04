@@ -2,7 +2,7 @@
 
 Any agent that supports remote MCP servers with OAuth sign-in can use the FrameOS connector, and any agent that reads Agent Skills (`SKILL.md` folders) can use the FrameOS skills.
 
-> **Not yet verified.** The FrameOS connector is not live as of 2026-10-02 ([status](../status.md)), and FrameOS has not been tested with the agents on this page. Use the host-specific guides where one exists: [Claude Code](claude-code.md), [Claude.ai](claude-ai.md), [Codex](codex.md), [ChatGPT](chatgpt.md), [Cursor](cursor.md), [Gemini CLI](gemini-cli.md), [VS Code and Copilot](vscode-copilot.md), [Perplexity](perplexity.md), [Devin and Windsurf](devin-windsurf.md).
+> **Coming soon for other agents.** The FrameOS connector is live as of 2026-10-05, but its sign-in server only admits pre-registered apps for now, and so far only Claude Code is pre-registered ([status](../status.md)). FrameOS has not been tested with the agents on this page. Use the host-specific guides where one exists: [Claude Code](claude-code.md), [Claude.ai](claude-ai.md), [Codex](codex.md), [ChatGPT](chatgpt.md), [Cursor](cursor.md), [Gemini CLI](gemini-cli.md), [VS Code and Copilot](vscode-copilot.md), [Perplexity](perplexity.md), [Devin and Windsurf](devin-windsurf.md).
 
 ## 1. Add the skills with `npx skills`
 

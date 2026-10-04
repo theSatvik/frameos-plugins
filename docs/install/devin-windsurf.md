@@ -2,7 +2,7 @@
 
 Windsurf became **Devin Desktop** on 2 June 2026. Its default agent, Devin Local, uses the Devin CLI's plugins and MCP settings, so the steps below cover Devin Desktop and the Devin CLI. The older Cascade agent is covered at the end.
 
-> **Not yet verified.** The FrameOS connector is not live as of 2026-10-02 ([status](../status.md)), and none of these steps has been tested in Devin or Windsurf yet. Steps come from Devin's documentation.
+> **Coming soon: Devin and Windsurf can't sign in to FrameOS yet.** The FrameOS connector is live as of 2026-10-05, but its sign-in server only admits pre-registered apps for now, and so far only Claude Code is pre-registered ([status](../status.md)). None of these steps has been tested in Devin or Windsurf yet. Steps come from Devin's documentation.
 
 ## Requirements
 
@@ -43,7 +43,7 @@ Or edit the config yourself: `~/.config/devin/mcp_config.json` (Windows: `%APPDA
 devin mcp login frameos
 ```
 
-This opens your browser. Devin registers itself with Dynamic Client Registration when no client ID is configured, which FrameOS's sign-in server does not offer yet ([status](../status.md#prerequisites-before-any-host-can-connect)).
+This opens your browser. Devin registers itself with Dynamic Client Registration when no client ID is configured, which FrameOS's sign-in server does not offer yet ([status](../status.md#prerequisites-before-every-host-can-connect)).
 
 ## Check it works
 

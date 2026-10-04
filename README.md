@@ -4,7 +4,7 @@ Turn your long videos into short clips by asking the AI agent you already use. P
 
 This repo holds the official FrameOS plugin, skills and extension packages. They connect your agent to the hosted FrameOS connector (an MCP server at `https://frameos.studio/mcp`) and teach it how to use FrameOS well: when to check your credits, how long to wait for a render, which caption styles exist, and never to post anything without your go-ahead.
 
-> **Status, 2026-10-02: the hosted connector is not live yet.** `https://frameos.studio/mcp` currently returns 404, so you can install these packages but sign-in and FrameOS actions will fail until it launches. Nothing here has been tested against a live FrameOS account yet. See [docs/status.md](docs/status.md) for what is left, and [try the whole workflow against the mock server](#try-it-without-credits-mock-server) in the meantime.
+> **Status, 2026-10-05: the hosted connector is live, and Claude Code can sign in.** `https://frameos.studio/mcp` is up. A real end-to-end test passed in Claude Code on 2026-10-05: sign-in, then `whoami` and `list_projects` returned a real account's data ([how to connect](docs/install/claude-code.md)). The other apps (claude.ai and Claude Desktop, ChatGPT, Codex, Cursor, Gemini CLI, VS Code and Copilot, Perplexity) are coming soon: they can't sign in yet. See [docs/status.md](docs/status.md) for what is left, and [try the whole workflow against the mock server](#try-it-without-credits-mock-server) without spending credits.
 
 ## What you can say to your agent
 
@@ -38,15 +38,16 @@ More ready-to-use prompts, grouped by job, are in [docs/workflows.md](docs/workf
 - Exports, caption changes, copy drafts, collections and posting are free.
 - A render only starts when your balance covers the whole video, so you never end up with a half-paid render.
 - Up to 3 videos can be processing at once in a workspace. Your agent queues the rest and submits them as renders finish.
+- The server-side checks for these last two rules are still in progress ([status](docs/status.md)). The skills already follow both.
 - Ask your agent "What is my FrameOS credit balance?" any time. Plans and prices live on https://frameos.studio/pricing; your agent won't quote them.
 
 ## Install
 
-Pick your app. Each guide has the exact steps, how to check it worked, how to sign in again, and known limits.
+Pick your app. Each guide has the exact steps, how to check it worked, how to sign in again, and known limits. **Today only Claude Code can sign in**; the other apps are coming soon ([status](docs/status.md)).
 
 | Where you use AI | Quickest path | Full guide |
 |---|---|---|
-| Claude Code | `claude plugin marketplace add theSatvik/frameos-plugins` then `claude plugin install frameos@frameos` | [docs/install/claude-code.md](docs/install/claude-code.md) |
+| Claude Code | `claude mcp add --transport http -s user frameos https://frameos.studio/mcp` then `claude mcp login frameos` (tested). Or, with the skills: `claude plugin marketplace add theSatvik/frameos-plugins` then `claude plugin install frameos@frameos` | [docs/install/claude-code.md](docs/install/claude-code.md) |
 | Claude.ai, Claude Desktop, Cowork | **Customize > Plugins > Add > Add marketplace**, enter `theSatvik/frameos-plugins`; or add a custom connector with `https://frameos.studio/mcp` | [docs/install/claude-ai.md](docs/install/claude-ai.md) |
 | Codex | `codex plugin marketplace add theSatvik/frameos-plugins` then `codex plugin add frameos@frameos` | [docs/install/codex.md](docs/install/codex.md) |
 | ChatGPT | Turn on developer mode, then add `https://frameos.studio/mcp` under ChatGPT Plugins | [docs/install/chatgpt.md](docs/install/chatgpt.md) |
@@ -74,7 +75,7 @@ Install FrameOS by following https://github.com/theSatvik/frameos-plugins/blob/m
 - Frame clips as 9:16 (Shorts, Reels, TikTok), 4:5 or 3:4 (feeds), 1:1 (square) or 16:9 (landscape).
 - Steer clipping toward a topic. Use the words the speaker actually says ("pricing", "hiring"), because the focus is matched on words; it's a preference, not a filter.
 - Restyle captions with 22 caption styles (or none), 16 fonts, size, position and 17 animations, then export a captioned MP4. Download links last about an hour, and your agent fetches fresh ones when needed.
-- Search the full transcript of videos processed after the connector launches (older projects may only have per-clip transcripts) and pull quotes with timestamps.
+- Search the full transcript of videos processed since the connector launched (older projects may only have per-clip transcripts) and pull quotes with timestamps.
 - Make up to 3 thumbnails per request from real frames of your video with text layout (not AI-generated images).
 - Draft a title, caption and hashtags for YouTube, Instagram, Facebook, LinkedIn, TikTok or X.
 - Post to YouTube (Shorts), a Facebook Page, an Instagram Business account (Reels) or a LinkedIn personal profile that you connected in FrameOS - only after you confirm each post.
@@ -93,7 +94,7 @@ Clips made on the free plan carry a FrameOS watermark.
 
 ## Try it without credits (mock server)
 
-The repo ships a local mock FrameOS server with the same 27 tools and inputs as the real one, and errors in the same format. It needs no account, no sign-in and no credits, so you can watch the whole flow - submit, poll, clips, captions, export, thumbnails, copy and a fake post - before the hosted connector is live.
+The repo ships a local mock FrameOS server with the same 27 tools and inputs as the real one, and errors in the same format. It needs no account, no sign-in and no credits, so you can watch the whole flow - submit, poll, clips, captions, export, thumbnails, copy and a fake post - without touching a real account.
 
 ```bash
 git clone https://github.com/theSatvik/frameos-plugins

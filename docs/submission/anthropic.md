@@ -4,7 +4,7 @@ Portal: https://claude.ai/directory/manage. Submit **both** kinds below, pointin
 
 Who can submit: Pro and Max users from their own account; on Team and Enterprise, an Owner (Enterprise can also grant a **Directory** permission). Free accounts can't submit. Limit: 10 submissions per organization per 24 hours.
 
-**Blocked until** the connector is live and sign-in works ([status](../status.md)), and until tool titles exist (below).
+**Blocked until** Claude's apps can sign in. The connector is live and Claude Code signs in, but claude.ai and Claude Desktop are not enabled yet: the sign-in server admits only pre-registered clients, and only Claude Code is registered ([status](../status.md)). Tool titles and hints are now in place (below).
 
 ## 1. Plugin bundle (this GitHub repo)
 
@@ -29,11 +29,11 @@ Held for a human reviewer (avoid if possible): any non-image file over 256 KiB, 
 
 Requirements from Anthropic's review criteria, and the current state:
 
-- [ ] **Every tool has a `title`.** None of the 27 tools sets one today. For the MCP connector owner to fix.
-- [ ] **Every tool has the applicable `readOnlyHint` or `destructiveHint`.** Read tools set `readOnlyHint`; write tools set `destructiveHint: false`, including posting, which publishes publicly. For the MCP connector owner to fix.
+- [x] **Every tool has a `title`.** All 27 tools set one (snapshot of the backend's main branch, 2026-10-03).
+- [x] **Every tool has the applicable `readOnlyHint` or `destructiveHint`.** Every tool sets `readOnlyHint`, `destructiveHint` and `openWorldHint` explicitly, and `post_clip`, which publishes publicly, is marked destructive. The values for three tools still differ from this repo's proposal (`set_caption_style`, `recaption_clip`, `generate_social_copy`); see the [OpenAI checklist](openai.md#5-tool-annotations).
 - [x] Tool names of 64 characters or fewer; read and write tools are separate.
-- [x] OAuth 2.0 for sign-in (Clerk). Prerequisites still open: scope, CIMD/DCR, live routes ([status](../status.md#prerequisites-before-any-host-can-connect)).
-- [ ] Actionable error messages: errors are meant to reach the agent as `FrameOS returned HTTP <code>: <detail>`, which the skills translate for users. Today the MCP SDK hides that text behind a generic `Error executing tool <name>` ([status](../status.md#open-issues-in-the-mcp-connector), item 17).
+- [x] OAuth 2.0 for sign-in (Clerk). The `frameos:mcp` scope is advertised, the routes are live and CIMD is on, but admission is limited to pre-registered clients. Still open: pre-registering Claude's apps (or opening admission); DCR is off ([status](../status.md#prerequisites-before-every-host-can-connect)).
+- [x] Actionable error messages: errors reach the agent as `FrameOS returned HTTP <code>: <detail>`, which the skills translate for users. The connector raises the MCP SDK's `ToolError`, so the SDK no longer hides that text.
 - [ ] Documentation URL: this repo's README, or a page on frameos.studio.
 - [x] Privacy policy: https://frameos.studio/privacy
 - [x] Support contact: support@frameos.studio, https://frameos.studio/contact
@@ -47,7 +47,7 @@ Requirements from Anthropic's review criteria, and the current state:
 - Redirect URI for Claude's apps (web, Desktop, mobile, Cowork): `https://claude.ai/api/mcp/auth_callback`.
 - Claude Code uses a loopback redirect (`http://localhost/callback` or `http://127.0.0.1/callback`) on a random port.
 - Claude's apps use CIMD only when the sign-in server advertises `client_id_metadata_document_supported: true` and `none` among its token endpoint auth methods; otherwise they fall back to DCR, which needs a `registration_endpoint`. The hosted apps' client metadata document is `https://claude.ai/oauth/mcp-oauth-client-metadata` (found by probing, not documented).
-- An unauthenticated request must get a 401 with `WWW-Authenticate: Bearer resource_metadata="..."`. The protected-resource metadata `resource` must equal `https://frameos.studio/mcp` exactly, and only the first `authorization_servers` entry is used.
+- An unauthenticated request must get a 401 with `WWW-Authenticate: Bearer resource_metadata="..."`. The protected-resource metadata `resource` must equal `https://frameos.studio/mcp` exactly, and only the first `authorization_servers` entry is used. All of this holds as of 2026-10-05.
 - The sign-in server must be reachable from `160.79.104.0/21`.
 - Per tool call on claude.ai and Desktop: about 150,000 characters of output and 240 seconds. FrameOS returns quickly and never blocks on a render.
 

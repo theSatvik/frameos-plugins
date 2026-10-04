@@ -2,7 +2,7 @@
 
 Today the way in is **developer mode**: you add the FrameOS connector to ChatGPT yourself. A listing in the ChatGPT plugin directory, which would also bring the FrameOS skills, needs OpenAI's review first and has not been submitted yet ([checklist](../submission/openai.md)).
 
-> **Not yet verified on a live account.** The FrameOS connector is not live as of 2026-10-02 ([status](../status.md)), and nothing here has been tested in ChatGPT yet. Steps come from OpenAI's developer documentation.
+> **Coming soon: ChatGPT can't sign in to FrameOS yet.** The FrameOS connector is live as of 2026-10-05, but its sign-in server only admits pre-registered apps for now, and so far only Claude Code is pre-registered ([status](../status.md)). Nothing here has been tested in ChatGPT yet. Steps come from OpenAI's developer documentation.
 
 ## Requirements
 
@@ -40,7 +40,7 @@ ChatGPT asks you to confirm write actions by default, and it treats every tool t
 - **No skills in developer mode.** A developer-mode app carries the connector only, so ChatGPT works from the tools' own descriptions. You can paste prompts from [workflows.md](../workflows.md) to get the same behaviour. The skills arrive with the directory listing.
 - **Renders take time.** A render usually takes 10 to 30 minutes, and a chat can't wait that long. Start it, then come back and ask "check my FrameOS render".
 - **Links, not files.** ChatGPT can't upload a file from your computer to FrameOS. Share a public link instead (YouTube, Vimeo, Twitch, Kick, a public Google Drive file, or a direct video URL), or upload in the web app at https://frameos.studio/dashboard.
-- **Sign-in prerequisites.** ChatGPT needs FrameOS's sign-in server to offer client registration and the FrameOS permission by default. Both are still pending ([status](../status.md#prerequisites-before-any-host-can-connect)).
+- **Sign-in prerequisites.** ChatGPT signs in with its Client ID Metadata Document, which FrameOS's sign-in server accepts only from pre-registered apps; ChatGPT's is not registered yet. ChatGPT also needs the FrameOS permission granted by default, which is not confirmed yet ([status](../status.md#prerequisites-before-every-host-can-connect)).
 
 ## For workspace admins
 

@@ -8,7 +8,7 @@ FrameOS ships an [Agent Plugins](https://agent-plugins.org) package in [`agent-p
 | [B. VS Code plugin](#b-vs-code-plugin) | Skills and connector |
 | [C. Connector only](#c-connector-only) | The FrameOS tools |
 
-> **Not yet verified on a live account.** The FrameOS connector is not live as of 2026-10-02 ([status](../status.md)), and none of these routes has been tested in VS Code or Copilot yet. Steps come from the VS Code and GitHub Copilot documentation.
+> **Coming soon: VS Code and Copilot can't sign in to FrameOS yet.** The FrameOS connector is live as of 2026-10-05, but its sign-in server only admits pre-registered apps for now, and so far only Claude Code is pre-registered ([status](../status.md)). None of these routes has been tested in VS Code or Copilot yet. Steps come from the VS Code and GitHub Copilot documentation.
 
 ## Requirements
 
@@ -118,5 +118,5 @@ You should see your workspace name and a credit number.
 ## Known limitations
 
 - **Copilot cloud agent and Copilot code review do not support remote MCP servers that use OAuth**, so FrameOS works in VS Code, the Copilot CLI and the Copilot app, but not there.
-- VS Code tries Client ID Metadata Documents first, then Dynamic Client Registration. FrameOS's sign-in server offers neither yet ([status](../status.md#prerequisites-before-any-host-can-connect)).
+- VS Code tries Client ID Metadata Documents first, then Dynamic Client Registration. FrameOS's sign-in server accepts Client ID Metadata Documents only from pre-registered apps, VS Code's is not registered yet, and Dynamic Client Registration is off ([status](../status.md#prerequisites-before-every-host-can-connect)).
 - Copilot can upload a local video file for you only where its agent can run commands.

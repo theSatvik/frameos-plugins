@@ -2,7 +2,7 @@
 
 Add FrameOS as a custom remote connector, and optionally upload the FrameOS skills to Perplexity Computer.
 
-> **Not yet verified on a live account.** The FrameOS connector is not live as of 2026-10-02 ([status](../status.md)), and nothing here has been tested in Perplexity yet. Steps come from Perplexity's help center.
+> **Coming soon: Perplexity can't sign in to FrameOS yet.** The FrameOS connector is live as of 2026-10-05, but its sign-in server only admits pre-registered apps for now, and so far only Claude Code is pre-registered ([status](../status.md)). Nothing here has been tested in Perplexity yet. Steps come from Perplexity's help center.
 
 ## Requirements
 
@@ -54,7 +54,7 @@ Computer accepts uploaded skills on every plan that includes Computer.
 ## Known limitations
 
 - Perplexity's documentation describes discovering sign-in settings from `/.well-known/oauth-authorization-server` and does not mention the protected-resource metadata FrameOS publishes. Whether Perplexity finds FrameOS's sign-in server on its own is not yet verified.
-- Perplexity registers itself automatically (Dynamic Client Registration) when no client ID is entered; FrameOS's sign-in server does not offer that yet ([status](../status.md#prerequisites-before-any-host-can-connect)).
+- Perplexity registers itself automatically (Dynamic Client Registration) when no client ID is entered; FrameOS's sign-in server does not offer that yet ([status](../status.md#prerequisites-before-every-host-can-connect)).
 - Perplexity connects from datacenter IP ranges. If a firewall challenges those requests, they show up as 403 errors.
 - Renders take 10 to 30 minutes. Start one, then come back and ask "check my FrameOS render".
 - Uploading a file from your computer needs an agent that can run commands. In a normal Perplexity thread, share a public link instead (YouTube, Vimeo, Twitch, Kick, a public Google Drive file, or a direct video URL). Whether Perplexity Computer can do the upload is not yet verified.
