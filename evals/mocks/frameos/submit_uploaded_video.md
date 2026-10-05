@@ -1,6 +1,6 @@
 ---
 expect:
-  gs_path: ["gs://frameos-mock-media/inputs/3f9c2a7e5b1d4c8f9a0e6b2d7c4f1a3e.mp4"]
+  gs_path: ["gs://frameos-mock-media/inputs/c4e1a9b2-5f3d-4a8e-b6c7-1d0f2e3a4b5c/3f9c2a7e5b1d4c8f9a0e6b2d7c4f1a3e.mp4"]
 ---
 {
   "project": {
@@ -16,7 +16,7 @@ expect:
     "video_id": "d2a6f8b4-1c9e-4b57-a3d0-7e4c1f9b2a86",
     "job_id": "clip:render:d2a6f8b4-1c9e-4b57-a3d0-7e4c1f9b2a86",
     "max_clips": 3,
-    "eta_seconds": 1418,
-    "source_duration_seconds": 2843.0
+    "eta_seconds": null,
+    "source_duration_seconds": null
   }
 }

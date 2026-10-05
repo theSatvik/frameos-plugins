@@ -129,6 +129,11 @@ class FlowTest(unittest.IsolatedAsyncioTestCase):
                 return seen
         self.fail(f"{job_id} never finished: {seen[-1]}")
 
+    async def put(self, upload_url, data):
+        request = urllib.request.Request(upload_url, data=data, method="PUT", headers={"Content-Type": "video/mp4"})
+        status = await asyncio.to_thread(lambda: urllib.request.urlopen(request, timeout=5).status)
+        self.assertEqual(status, 200)
+
     async def submit_and_finish(self, client, url="https://www.youtube.com/watch?v=mockFlow01", **args):
         submitted = await self.call(client, "submit_video", source_url=url, **args)
         await self.poll(client, submitted["job"]["job_id"])
@@ -212,11 +217,14 @@ class FlowTest(unittest.IsolatedAsyncioTestCase):
             text = await self.error(client, "submit_video", source_url="https://www.youtube.com/watch?v=broke1")
             self.assertIn("FrameOS returned HTTP 402: Out of credits. Upgrade your plan or add credits to keep "
                           "processing.", text)
-            # Like the real API, the row created before the credit check is left pending with no job.
-            stray = (await self.call(client, "list_projects"))[0]
-            self.assertEqual((stray["status"], stray["clipCount"]), ("pending", 0))
-            view = await self.call(client, "get_job", job_id=f"clip:render:{stray['id']}")
-            self.assertEqual((view["state"], view["message"]), ("pending", ""))
+            # The row made before the credit check is failed with the reason at once
+            # (mcp_routes._settle_refused_row), not left pending for the 30-minute reaper.
+            refused = (await self.call(client, "list_projects"))[0]
+            self.assertEqual((refused["status"], refused["clipCount"]), ("failed", 0))
+            self.assertEqual(refused["errorMessage"], "Out of credits. Upgrade your plan or add credits to keep "
+                                                      "processing. (insufficient_credits)")
+            view = await self.call(client, "get_job", job_id=f"clip:render:{refused['id']}")
+            self.assertEqual((view["state"], view["message"]), ("pending", ""))  # no job was queued
             # Thumbnails need 10 credits each.
             text = await self.error(client, "create_thumbnail_job", url="https://example.com/v.mp4")
             self.assertIn("FrameOS returned HTTP 402: Out of credits. Thumbnails cost 10 credits each", text)
@@ -269,27 +277,35 @@ class FlowTest(unittest.IsolatedAsyncioTestCase):
         async with Client(server, mode="legacy") as client:
             legacy = next(p for p in await self.call(client, "list_projects") if p["status"] == "completed")
             clips = await self.call(client, "list_clips", project_id=legacy["id"])
-            self.assertEqual(len(clips), 3)  # includes a soft-deleted clip from an earlier run, like the real route
-            self.assertEqual((await self.call(client, "get_project", project_id=legacy["id"]))["clips_count"], 3)
-            self.assertEqual(legacy["clipCount"], 2)  # list_projects counts live clips only
+            # A clip an earlier run left behind (soft-deleted) is not listed or counted anywhere.
+            self.assertEqual(len(clips), 2)
+            self.assertEqual((await self.call(client, "get_project", project_id=legacy["id"]))["clips_count"], 2)
+            self.assertEqual(legacy["clipCount"], 2)
+            replaced = [c for c in state.clips.values() if c.video_id == legacy["id"] and c.deleted]
+            self.assertEqual(len(replaced), 1)
+            self.assertNotIn(replaced[0].id, {c["id"] for c in clips})
+            self.assertIn("HTTP 404: Clip not found", await self.error(client, "describe_clip", clip_id=replaced[0].id))
             burned = [c for c in clips if c["captionMode"] == "burned"]
-            self.assertEqual(len(burned), 3)
+            self.assertEqual(len(burned), 2)
             self.assertFalse(burned[0]["exportRequired"])
             self.assertIsNotNone(burned[0]["downloadUrl"])
-            stale = [c for c in clips if state.clips[c["id"]].deleted]
-            self.assertEqual(len(stale), 1)
-            self.assertIn("HTTP 404: Clip not found", await self.error(client, "describe_clip", clip_id=stale[0]["id"]))
             self.assertIn("HTTP 404: Source transcript unavailable for this project",
                           await self.error(client, "get_transcript", project_id=legacy["id"]))
 
-            live = next(c for c in clips if not state.clips[c["id"]].deleted)
+            live = clips[0]
             text = await self.error(client, "set_caption_style", clip_id=live["id"], style="beasty")
             self.assertIn("FrameOS returned HTTP 409: This clip has burned-in captions — use POST "
                           "/clips/{id}/recaption.", text)
             ready = await self.call(client, "export_clip", clip_id=live["id"])
             self.assertEqual(ready["status"], "ready")  # burned clips are already final
 
-            recap = await self.call(client, "recaption_clip", clip_id=live["id"], style="beasty")
+            # recaption_clip checks the style against the catalogue first (422), like set_caption_style.
+            self.assertIn("FrameOS returned HTTP 422: Unknown caption style: mrbeast",
+                          await self.error(client, "recaption_clip", clip_id=live["id"], style="mrbeast"))
+            self.assertIn("HTTP 422: Unknown caption style: mrbeast",
+                          await self.error(client, "recaption_clip", clip_id=str(uuid.uuid4()), style="mrbeast"))
+            recap = await self.call(client, "recaption_clip", clip_id=live["id"], style="Bounce")
+            self.assertEqual(recap["style"], "beasty")  # the canonical id, not what was sent
             self.assertTrue(recap["job_id"].startswith(f"recap:{live['id']}:"))
             done = await self.poll(client, recap["job_id"])
             self.assertEqual(done[-1]["message"], "re-captioned · beasty")
@@ -345,28 +361,194 @@ class FlowTest(unittest.IsolatedAsyncioTestCase):
             self.assertIn("HTTP 404: Social account not found",
                           await self.error(client, "post_clip", clip_id=clip["id"], account_id=str(uuid.uuid4())))
 
+    async def test_a_blank_post_title_uses_the_clips_own_title(self):
+        server, state = _new_server()
+        async with Client(server, mode="legacy") as client:
+            _, clips = await self.submit_and_finish(client)
+            clip = clips[0]
+            await self.poll(client, (await self.call(client, "export_clip", clip_id=clip["id"]))["job_id"])
+            accounts = {a["platform"]: a for a in await self.call(client, "list_social_accounts")}
+
+            job = await self.call(client, "post_clip", clip_id=clip["id"], account_id=accounts["youtube"]["id"],
+                                  title="   ", description="Second line\nmore")
+            await self.poll(client, job["job_id"])
+            youtube = state.posts[-1]
+            self.assertEqual(youtube["title"], clip["title"])  # never the word "Clip"
+            self.assertNotEqual(youtube["title"], "Clip")
+
+            # Instagram and LinkedIn post one text built only from what was sent.
+            job = await self.call(client, "post_clip", clip_id=clip["id"], account_id=accounts["instagram"]["id"],
+                                  description="The whole caption, hashtags and all. #pricing")
+            await self.poll(client, job["job_id"])
+            self.assertEqual(state.posts[-1]["body"], "The whole caption, hashtags and all. #pricing")
+            job = await self.call(client, "post_clip", clip_id=clip["id"], account_id=accounts["linkedin"]["id"],
+                                  title="Opening line", description="The rest.")
+            await self.poll(client, job["job_id"])
+            self.assertEqual(state.posts[-1]["body"], "Opening line\n\nThe rest.")
+            self.assertEqual(state.posts[-1]["title"], "Opening line")
+
+    async def test_export_while_rendering_returns_the_same_job(self):
+        server, _ = _new_server()
+        async with Client(server, mode="legacy") as client:
+            _, clips = await self.submit_and_finish(client)
+            clip = clips[0]
+            first = await self.call(client, "export_clip", clip_id=clip["id"])
+            again = await self.call(client, "export_clip", clip_id=clip["id"], filename="other-name")
+            self.assertEqual(again, first)  # no second burn of the same artifact
+            await self.poll(client, first["job_id"])
+            self.assertEqual((await self.call(client, "export_clip", clip_id=clip["id"]))["status"], "ready")
+            # A new look is a new artifact, so it gets a burn of its own.
+            await self.call(client, "set_caption_style", clip_id=clip["id"], style="beasty")
+            restyled = await self.call(client, "export_clip", clip_id=clip["id"])
+            self.assertEqual((restyled["status"], restyled["style"]), ("rendering", "beasty"))
+            self.assertEqual(restyled, await self.call(client, "export_clip", clip_id=clip["id"]))
+
+    async def test_collection_export_keeps_ten_rendering_per_call(self):
+        server, _ = _new_server(credits=5000)
+        async with Client(server, mode="legacy") as client:
+            made = await self.call(client, "create_collection", name="Big pack")
+            ids = []
+            n = 0
+            while len(ids) < 12:
+                _, clips = await self.submit_and_finish(client, url=f"https://www.youtube.com/watch?v=batch{n}",
+                                                        max_clips=5)
+                ids += [c["id"] for c in clips]
+                n += 1
+            for clip_id in ids[:12]:
+                await self.call(client, "add_clip_to_collection", collection_id=made["id"], clip_id=clip_id)
+
+            first = await self.call(client, "export_collection", collection_id=made["id"])
+            statuses = [c["status"] for c in first["clips"]]
+            self.assertEqual(statuses, ["rendering"] * 10 + ["not_started"] * 2)
+            self.assertEqual(first["not_started"], 2)
+            waiting = first["clips"][10]
+            self.assertEqual(set(waiting), {"clip_id", "status", "style", "reason"})
+            self.assertEqual(waiting["reason"], "Not started yet, to keep this call short. Call export_collection "
+                                                "again after the rendering clips finish.")
+            # Calling again while they render starts nothing new: same jobs, same two waiting.
+            second = await self.call(client, "export_collection", collection_id=made["id"])
+            self.assertEqual([c.get("job_id") for c in second["clips"]], [c.get("job_id") for c in first["clips"]])
+            self.assertEqual(second["not_started"], 2)
+
+            for entry in first["clips"][:10]:
+                await self.poll(client, entry["job_id"])
+            third = await self.call(client, "export_collection", collection_id=made["id"])
+            self.assertEqual([c["status"] for c in third["clips"]], ["ready"] * 10 + ["rendering"] * 2)
+            self.assertEqual(third["not_started"], 0)
+            for entry in third["clips"][10:]:
+                await self.poll(client, entry["job_id"])
+            last = await self.call(client, "export_collection", collection_id=made["id"])
+            self.assertEqual([c["status"] for c in last["clips"]], ["ready"] * 12)
+
+    async def test_thumbnail_inputs(self):
+        server, state = _new_server(credits=500)
+        async with Client(server, mode="legacy") as client:
+            _, clips = await self.submit_and_finish(client)
+            clip_id = clips[0]["id"]
+            for bad in (0, -2):
+                text = await self.error(client, "create_thumbnail_job", clip_id=clip_id, max_thumbnails=bad)
+                self.assertIn("FrameOS returned HTTP 422: [{'type': 'greater_than_equal', "
+                              "'loc': ['body', 'max_thumbnails']", text)
+            # Body validation comes first, before the link checks.
+            text = await self.error(client, "create_thumbnail_job", url="gs://x/y.mp4", max_thumbnails=0)
+            self.assertIn("'loc': ['body', 'max_thumbnails']", text)
+
+            url_message = ("FrameOS returned HTTP 422: url must be a public http(s) video link. Use clip_id or "
+                           "video_id for media in this workspace.")
+            for bad in (f"gs://{mock.BUCKET}/inputs/a.mp4", "  gs://other/b.mp4", "/Users/me/episode.mp4",
+                        "file:///tmp/a.mp4", "http://localhost:8000/v.mp4", "http://169.254.169.254/latest",
+                        "http://10.0.0.7/v.mp4", "http://[::1]/v.mp4", "http://metadata.google.internal/x",
+                        "HTTPS://example.com/v.mp4"):
+                with self.subTest(url=bad):
+                    self.assertIn(url_message, await self.error(client, "create_thumbnail_job", url=bad))
+            for bad in ("gs://bucket/ref.png", "file:///tmp/ref.png", "https://localhost/ref.png", "ref.png"):
+                with self.subTest(style_ref=bad):
+                    self.assertIn("FrameOS returned HTTP 422: style_ref must be a public http(s) image link.",
+                                  await self.error(client, "create_thumbnail_job", clip_id=clip_id, style_ref=bad))
+            self.assertEqual(state.thumbnails, [])
+
+            # More than 3 makes 3; a public style reference is used.
+            before = (await self.call(client, "whoami"))["account"]["credits"]
+            created = await self.call(client, "create_thumbnail_job", clip_id=clip_id, max_thumbnails=7,
+                                      style_ref=" https://i.ytimg.com/vi/abc/maxresdefault.jpg ")
+            done = await self.poll(client, created["jobId"], tool="get_thumbnail_job")
+            self.assertIn("matching your style", [st.message for st in state.jobs[created["jobId"]].stages])
+            self.assertEqual(len(done[-1]["result"]["thumbnails"]), 3)
+            self.assertEqual(before - (await self.call(client, "whoami"))["account"]["credits"], 30)
+            one = await self.call(client, "create_thumbnail_job", url="https://www.youtube.com/watch?v=abc",
+                                  max_thumbnails=1)
+            done = await self.poll(client, one["jobId"], tool="get_thumbnail_job")
+            self.assertEqual(len(done[-1]["result"]["thumbnails"]), 1)
+
+    async def test_focus_prompt_limits(self):
+        server, state = _new_server(credits=500)
+        receiver = mock.start_upload_receiver(state)
+        self.addCleanup(receiver.server_close)
+        self.addCleanup(receiver.shutdown)
+        async with Client(server, mode="legacy") as client:
+            focus = "pricing,   price " * 58 + "x" * 14  # 1000 characters, with runs of spaces
+            self.assertEqual(len(focus), 1000)
+            submitted = await self.call(client, "submit_video", source_url="https://www.youtube.com/watch?v=f1000",
+                                        focus_prompt=focus)
+            kept = state.projects[submitted["project"]["id"]].focus_prompt
+            self.assertEqual(kept, " ".join(focus.split())[:400])  # whitespace collapsed, first 400 used
+            for tool, args in (("submit_video", {"source_url": "https://www.youtube.com/watch?v=f1001"}),
+                               ("submit_uploaded_video", {"gs_path": f"gs://{mock.BUCKET}/inputs/x.mp4"})):
+                with self.subTest(tool=tool):
+                    text = await self.error(client, tool, focus_prompt="a" * 1001, **args)
+                    self.assertIn("FrameOS returned HTTP 422: [{'type': 'string_too_long', "
+                                  "'loc': ['body', 'focus_prompt']", text)
+            link = await self.call(client, "create_upload_link", filename="talk.mp4")
+            await self.put(link["upload_url"], b"\0" * 64)
+            started = await self.call(client, "submit_uploaded_video", gs_path=link["gs_path"], focus_prompt=focus)
+            self.assertEqual(state.projects[started["project"]["id"]].focus_prompt, kept)
+
+    async def test_private_and_internal_links_are_refused_at_submit(self):
+        server, state = _new_server()
+        async with Client(server, mode="legacy") as client:
+            before = len(state.projects)
+            for bad in ("http://localhost:8000/v.mp4", "http://192.168.1.4/v.mp4", "https://metadata/computeMetadata"):
+                with self.subTest(url=bad):
+                    self.assertIn("FrameOS returned HTTP 400: Paste a public video link (http:// or https://), "
+                                  "or upload the file.", await self.error(client, "submit_video", source_url=bad))
+            self.assertEqual(len(state.projects), before)  # refused before any project is made
+
     async def test_upload_flow(self):
         server, state = _new_server()
         receiver = mock.start_upload_receiver(state)
         self.addCleanup(receiver.server_close)
         self.addCleanup(receiver.shutdown)
         async with Client(server, mode="legacy") as client:
+            org = (await self.call(client, "whoami"))["organization_id"]
             link = await self.call(client, "create_upload_link", filename="Episode 12.mov")
-            self.assertTrue(link["gs_path"].startswith(f"gs://{mock.BUCKET}/inputs/"))
-            self.assertTrue(link["gs_path"].endswith(".mov"))
+            # gs://<bucket>/inputs/<workspace id>/<hex>.<ext>
+            self.assertRegex(link["gs_path"], rf"^gs://{mock.BUCKET}/inputs/{org}/[0-9a-f]{{32}}\.mov$")
+            odd = await self.call(client, "create_upload_link", filename="take two.M P4!")
+            self.assertTrue(odd["gs_path"].endswith(".mp4"))  # the extension keeps [a-z0-9] only
             self.assertIn("HTTP 409: Video upload has not completed",
                           await self.error(client, "submit_uploaded_video", gs_path=link["gs_path"]))
-            request = urllib.request.Request(link["upload_url"], data=b"\0" * 4096, method="PUT",
-                                             headers={"Content-Type": "video/mp4"})
-            status = await asyncio.to_thread(lambda: urllib.request.urlopen(request, timeout=5).status)
-            self.assertEqual(status, 200)
+            await self.put(link["upload_url"], b"\0" * 4096)
             started = await self.call(client, "submit_uploaded_video", gs_path=link["gs_path"])
             self.assertEqual(started["project"]["filename"], "Episode 12.mov")
-            self.assertIn("HTTP 404: Upload link was not issued to this workspace or expired",
-                          await self.error(client, "submit_uploaded_video", gs_path=link["gs_path"]))
+            # The API cannot measure an upload, so there is no length or ETA at submit.
+            self.assertIsNone(started["job"]["eta_seconds"])
+            self.assertIsNone(started["job"]["source_duration_seconds"])
+            # The claim is spent, but the path is in this workspace's folder: a resubmit
+            # while it renders is answered with the running job, not a 404.
+            again = await self.call(client, "submit_uploaded_video", gs_path=link["gs_path"])
+            self.assertEqual(again["job"], {"job_id": started["job"]["job_id"], "status": "already_running"})
             self.assertIn("HTTP 422: Invalid uploaded video path",
                           await self.error(client, "submit_uploaded_video", gs_path="gs://elsewhere/inputs/a.mp4"))
+            self.assertIn("HTTP 404: Upload link was not issued to this workspace or expired",
+                          await self.error(client, "submit_uploaded_video",
+                                           gs_path=f"gs://{mock.BUCKET}/inputs/{uuid.uuid4()}/a.mp4"))
+            self.assertIn("HTTP 409: Video upload has not completed",
+                          await self.error(client, "submit_uploaded_video",
+                                           gs_path=f"gs://{mock.BUCKET}/inputs/{org}/{uuid.uuid4().hex}.mp4"))
             await self.poll(client, started["job"]["job_id"])
+            # A successful render deletes the uploaded source.
+            self.assertIn("HTTP 409: Video upload has not completed",
+                          await self.error(client, "submit_uploaded_video", gs_path=link["gs_path"]))
             # The uploaded source is deleted after a successful render, so a
             # thumbnail job from the project (video_id) fails; clip_id works.
             thumb = await self.call(client, "create_thumbnail_job", video_id=started["project"]["id"])
@@ -410,7 +592,9 @@ class FlowTest(unittest.IsolatedAsyncioTestCase):
             await self.call(client, "add_clip_to_collection", collection_id=made["id"], clip_id=clips[1]["id"])
             self.assertEqual((await self.call(client, "list_collections"))[0]["clip_count"], 2)
             exported = await self.call(client, "export_collection", collection_id=made["id"])
+            self.assertEqual(set(exported), {"collection_id", "clips", "not_started"})
             self.assertEqual([c["status"] for c in exported["clips"]], ["rendering", "rendering"])
+            self.assertEqual(exported["not_started"], 0)
             copy = await self.call(client, "duplicate_clip", clip_id=clips[0]["id"])
             self.assertTrue(copy["title"].endswith("(Copy)"))
             self.assertEqual(copy["rank"], 3)
@@ -473,7 +657,11 @@ def _free_port() -> int:
 class GuardrailTest(unittest.IsolatedAsyncioTestCase):
     """Launch guardrails agreed on 2026-10-02: balance covers the video, at most 3 renders at once."""
 
-    call, error, poll = FlowTest.call, FlowTest.error, FlowTest.poll
+    call, error, poll, put = FlowTest.call, FlowTest.error, FlowTest.poll, FlowTest.put
+
+    @staticmethod
+    def needed(url):
+        return -(-int(mock.MockState._sim_duration(url)) // 60)
 
     async def test_three_renders_at_once_then_429(self):
         server, _ = _new_server(credits=1000)
@@ -497,6 +685,8 @@ class GuardrailTest(unittest.IsolatedAsyncioTestCase):
             for i in range(4):
                 text = await self.error(client, "submit_video", source_url=f"https://www.youtube.com/watch?v=stray{i}")
                 self.assertIn("HTTP 402: Out of credits", text)
+            refused = [p for p in state.projects.values() if p.source.endswith(tuple(f"stray{i}" for i in range(4)))]
+            self.assertEqual({p.status for p in refused}, {"failed"})
 
     async def test_known_length_must_be_covered_at_submit(self):
         server, state = _new_server(credits=5)
@@ -504,9 +694,13 @@ class GuardrailTest(unittest.IsolatedAsyncioTestCase):
             text = await self.error(client, "submit_video", source_url="https://vimeo.com/76979871")
             project = next(p for p in state.projects.values() if p.source.endswith("76979871"))
             needed = -(-int(project.sim_duration) // 60)
-            self.assertIn(f"FrameOS returned HTTP 402: This video is {needed} minutes long and needs {needed} "
-                          f"credits, but your workspace has 5. Add credits or use a shorter video.", text)
+            message = (f"This video is {needed} minutes long and needs {needed} credits, but your workspace "
+                       f"has 5. Add credits or use a shorter video.")
+            self.assertIn(f"FrameOS returned HTTP 402: {message}", text)
             self.assertEqual((await self.call(client, "whoami"))["account"]["credits"], 5)
+            # The refused row is failed with that reason, not left pending.
+            row = next(p for p in await self.call(client, "list_projects") if p["id"] == project.id)
+            self.assertEqual((row["status"], row["errorMessage"]), ("failed", f"{message} (insufficient_credits)"))
 
     async def test_unknown_length_fails_after_download_without_charge(self):
         server, state = _new_server(credits=5)
@@ -520,6 +714,72 @@ class GuardrailTest(unittest.IsolatedAsyncioTestCase):
             listed = (await self.call(client, "list_projects"))[0]
             self.assertTrue(listed["errorMessage"].endswith("(insufficient_credits)"))
             self.assertEqual((await self.call(client, "whoami"))["account"]["credits"], 5)
+            # The worker saved the length it measured, so a resubmit is refused at submit.
+            text = await self.error(client, "submit_video", source_url="https://www.youtube.com/watch?v=long01")
+            self.assertIn("FrameOS returned HTTP 402: This video is", text)
+            self.assertIn("Add credits or use a shorter video.", text)
+            listed = (await self.call(client, "list_projects"))[0]
+            self.assertEqual(listed["id"], submitted["project"]["id"])  # the same row, failed again
+            self.assertEqual(listed["status"], "failed")
+            self.assertTrue(listed["errorMessage"].endswith("Add credits or use a shorter video. (insufficient_credits)"))
+
+    async def test_uploads_are_checked_after_download_not_at_submit(self):
+        server, state = _new_server(credits=5)
+        receiver = mock.start_upload_receiver(state)
+        self.addCleanup(receiver.server_close)
+        self.addCleanup(receiver.shutdown)
+        async with Client(server, mode="legacy") as client:
+            link = await self.call(client, "create_upload_link", filename="long-episode.mp4")
+            await self.put(link["upload_url"], b"\0" * 128)
+            submitted = await self.call(client, "submit_uploaded_video", gs_path=link["gs_path"])  # no 402 here
+            project = state.projects[submitted["project"]["id"]]
+            needed = -(-int(project.sim_duration) // 60)
+            self.assertGreater(needed, 5)
+            seen = await self.poll(client, submitted["job"]["job_id"])
+            self.assertEqual(seen[-1]["state"], "failed")
+            self.assertEqual(seen[-1]["message"], f"This video is {needed} minutes long and needs {needed} credits, "
+                                                  f"but your workspace has 5. Nothing was charged. (insufficient_credits)")
+            self.assertEqual((await self.call(client, "whoami"))["account"]["credits"], 5)
+            # The upload is kept for a retry, and now its length is known: refused at submit.
+            text = await self.error(client, "submit_uploaded_video", gs_path=link["gs_path"])
+            self.assertIn(f"FrameOS returned HTTP 402: This video is {needed} minutes long and needs {needed} "
+                          f"credits, but your workspace has 5. Add credits or use a shorter video.", text)
+            self.assertEqual((project.status, project.filename), ("failed", "long-episode.mp4"))
+            self.assertTrue(project.error_message.endswith("shorter video. (insufficient_credits)"))
+            state.paid_credits = 500  # credits added
+            again = await self.call(client, "submit_uploaded_video", gs_path=link["gs_path"])
+            self.assertEqual(again["project"]["id"], project.id)
+            self.assertEqual((await self.poll(client, again["job"]["job_id"]))[-1]["state"], "completed")
+
+    async def test_known_length_holds_credits_while_it_renders(self):
+        a, b = "https://vimeo.com/no-clips-hold1", "https://vimeo.com/hold2"
+        credits = self.needed(a) + self.needed(b) - 1
+        server, state = _new_server(credits=credits)
+        async with Client(server, mode="legacy") as client:
+            first = await self.call(client, "submit_video", source_url=a)
+            # The first render holds what it needs, so the second sees only the rest.
+            text = await self.error(client, "submit_video", source_url=b)
+            self.assertIn(f"needs {self.needed(b)} credits, but your workspace has {self.needed(b) - 1}.", text)
+            # The first ends without clips (not charged), which frees its hold.
+            self.assertEqual((await self.poll(client, first["job"]["job_id"]))[-1]["state"], "failed")
+            self.assertEqual((await self.call(client, "whoami"))["account"]["credits"], credits)
+            second = await self.call(client, "submit_video", source_url=b)
+            self.assertEqual((await self.poll(client, second["job"]["job_id"]))[-1]["state"], "completed")
+
+    async def test_unknown_length_holds_credits_once_measured(self):
+        c, d = "https://www.youtube.com/watch?v=hold3", "https://www.youtube.com/watch?v=hold4"
+        credits = self.needed(c) + self.needed(d) - 1
+        server, _ = _new_server(credits=credits)
+        async with Client(server, mode="legacy") as client:
+            first = await self.call(client, "submit_video", source_url=c)
+            second = await self.call(client, "submit_video", source_url=d)  # neither length is known yet
+            view = await self.call(client, "get_job", job_id=first["job"]["job_id"])
+            self.assertEqual(view["message"], "transcribing")  # measured, checked and holding
+            seen = await self.poll(client, second["job"]["job_id"])
+            self.assertEqual(seen[-1]["state"], "failed")
+            self.assertIn(f"needs {self.needed(d)} credits, but your workspace has {self.needed(d) - 1}. "
+                          f"Nothing was charged. (insufficient_credits)", seen[-1]["message"])
+            self.assertEqual((await self.poll(client, first["job"]["job_id"]))[-1]["state"], "completed")
 
     async def test_guardrails_can_be_switched_off(self):
         state = mock.MockState(mock.MockConfig.from_env({"FRAMEOS_MOCK_GUARDRAILS": "0", "FRAMEOS_MOCK_CREDITS": "1000"}))

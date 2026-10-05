@@ -17,5 +17,6 @@ expect:
       "style": "karaoke",
       "job_id": "export:c2d7a1e9-3f5b-4a80-9d6c-8e1b4f7a2c36:1759382400"
     }
-  ]
+  ],
+  "not_started": 0
 }

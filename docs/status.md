@@ -40,11 +40,11 @@ These are owned by the MCP connector work, not by this repo:
 1. **Clerk scope.** Done: `frameos:mcp` is created and advertised. It is also in the default scopes for dynamic clients, which the clients marked below need.
 2. **Clerk client onboarding.** Partly done. CIMD is on, but only pre-registered clients are admitted, and only Claude Code is registered. Each other app is enabled once its CIMD client is pre-registered or admission is opened. DCR is not enabled: Gemini CLI has no CIMD support and needs it (or a pre-registered client), and Cursor, Copilot CLI, Devin and Perplexity rely on it.
 3. **Live endpoint and well-known routes.** Done.
-4. **Launch guardrails** (owner decision, 2026-10-02). **Still in progress on the server.** The connector is open to every FrameOS plan, with credits as the only gate. Two server-side checks:
-   - A render starts only when the balance covers the video. The check runs at submit when the length is known; otherwise the worker checks right after download and fails with `(insufficient_credits)`, charging nothing.
-   - At most 3 renders process at once per workspace. Over the limit, the server returns 429.
+4. **Launch guardrails** (owner decision, 2026-10-02). **Built in a connector update that is not deployed yet.** The connector is open to every FrameOS plan, with credits as the only gate. Two server-side checks:
+   - A render starts only when the balance covers the video, less the credits held by renders already in progress. The check runs at submit when the length is known (a refused project is marked failed with the reason); otherwise, and always for uploads, the worker checks right after download and fails with `(insufficient_credits)`, charging nothing.
+   - At most 3 renders process at once per workspace. Over the limit, the server returns 429. Submits in one workspace are taken one at a time; one that waits too long gets a 429 asking to submit again in a few seconds.
 
-   The exact messages are specified in the MCP connector owner's task list. The skills and `dev/mock_server.py` already follow them; switch them off in the mock with `FRAMEOS_MOCK_GUARDRAILS=0`.
+   The skills, `dev/mock_server.py` and the tool snapshot in `tests/fixtures/` already follow that update and its exact messages; switch the guardrails off in the mock with `FRAMEOS_MOCK_GUARDRAILS=0`.
 5. **End-to-end check.** Done for Claude Code on 2026-10-05 (sign-in, `whoami` and `list_projects`). Each other host needs one after it is enabled.
 
 Which clients ask for `frameos:mcp` on their own (from client source and docs; confirmed against the live server only for Claude Code, which got the scope with the connector added directly and no scope configured):
@@ -84,22 +84,29 @@ These were found while building the packages and are for the owner of the FrameO
 
 **Behaviour an agent can see**
 
-1. Listing a project's clips can include clips from an earlier run that no longer exist; opening or exporting those returns "not found".
-2. Calling export again before an export finishes starts another render each time; exporting a whole collection can start up to 50 renders in one call, close to the per-call time limit.
-3. Re-captioning a legacy clip does not check the style name; a bad name is saved and later exports fail until the style is set again.
-4. Clips that need an export still expose caption-free preview links.
-5. The transcript tool takes milliseconds but returns seconds, and does not say so.
-6. The focus prompt accepts 1,000 characters but only the first 400 are used.
-7. Posting is described as immediate but is a background job; privacy is ignored on Instagram and LinkedIn, and "unlisted" posts publicly on Facebook.
-8. Units and field names drift between tools: progress is 0-100 in the project list but 0-1 elsewhere, thumbnails return `jobId` while other tools return `job_id`, and the single-project view has no error message.
-9. The upload link accepts a content type it never uses.
-10. Re-submitting a link whose earlier run failed or was cancelled quietly reuses that run's clip-length band and content profile.
-11. If the same link is already processing, new settings (clip count, aspect, focus) are dropped without saying so.
-12. A submit refused for zero credits still leaves an empty project, which is marked failed about 30 minutes later.
-13. Asking for 0 thumbnails produces 3; the count is silently reduced to what the balance affords; the "include face" option does nothing yet.
-14. Thumbnails made from an uploaded project fail after its render, because the uploaded source is deleted; making them from a clip works.
-15. Any positive balance lets a full render through, and the balance stops at zero. The first launch guardrail above addresses this.
-16. A job ID that does not exist but looks valid reads as "pending" forever.
+Fixed in the connector update that is not deployed yet. The skills, the mock and the tool snapshot already follow it:
+
+- Listing a project's clips leaves out clips from an earlier run.
+- Calling export again while an export runs returns the same job instead of starting another render. A collection export keeps at most 10 clips rendering per call and returns the rest as `not_started` for a later call, so it stays within the per-call time limit.
+- Re-captioning a legacy clip checks the style name.
+- A submit refused for credits marks its project failed right away, with the reason.
+- Asking for 0 thumbnails is refused instead of producing 3.
+- A post with an empty title uses the clip's own title instead of the word "Clip".
+- Any positive balance no longer lets a full render through (the first launch guardrail above).
+- The tool descriptions now say that the transcript tool takes milliseconds and returns seconds, that only the first 400 characters of a focus prompt are used, that posting runs as a job and where privacy is honoured, and which thumbnail inputs are accepted.
+
+Still open:
+
+1. Clips that need an export still expose caption-free preview links.
+2. The focus prompt accepts 1,000 characters but only the first 400 are used (the tool description now says so).
+3. Privacy is ignored on Instagram and LinkedIn, and "unlisted" posts publicly on Facebook (the tool description now says so).
+4. Units and field names drift between tools: progress is 0-100 in the project list but 0-1 elsewhere, thumbnails return `jobId` while other tools return `job_id`, and the single-project view has no error message.
+5. The upload link accepts a content type it never uses.
+6. Re-submitting a link whose earlier run failed or was cancelled quietly reuses that run's clip-length band and content profile.
+7. If the same link is already processing, new settings (clip count, aspect, focus) are dropped without saying so.
+8. The thumbnail count is silently reduced to what the balance affords, and the "include face" option does nothing yet.
+9. Thumbnails made from an uploaded project fail after its render, because the uploaded source is deleted; making them from a clip works.
+10. A job ID that does not exist but looks valid reads as "pending" forever.
 
 **Security.** Three security findings in the connector are handled privately with its owner. Details stay out of this public file until they are fixed; see [SECURITY.md](../SECURITY.md) for how to report issues.
 

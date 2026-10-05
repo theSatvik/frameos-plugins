@@ -50,7 +50,7 @@ The video itself (same source gives the same result - do not re-submit it unchan
 | Code | Meaning | Next step for the user |
 |---|---|---|
 | `(source_too_short)` | under 30 seconds of video | use a longer video |
-| `(insufficient_credits)` | the video turned out longer than the balance covers; checked right after download, nothing was charged | add credits (https://frameos.studio/pricing) or use a shorter video |
+| `(insufficient_credits)` | the balance did not cover the video. Checked at submit when the length is known (the 402 message, saved on the project), otherwise right after download. Nothing was charged | add credits (https://frameos.studio/pricing) or use a shorter video, then submit the same link or `gs_path` again: it re-runs this project |
 | `(no_clips_found)` | not enough clear speech | use a longer video, or one with more talking |
 | `(no_publishable_clips)` | moments found, none stood on their own | use a longer video, or one where the speaker finishes complete thoughts |
 | `(not_a_video)` | the file is an image | upload a video file |
@@ -85,7 +85,7 @@ Messages without a code:
 |---|---|---|
 | `Processing couldn't get capacity. Please try again.` | no render capacity for 45 minutes | submit the same link again later |
 | `Processing timed out. Please try again.` | the render ran too long | try again later, or a shorter source |
-| `Processing crashed before it could report. Please try again.` | the render died | submit again; also appears on the empty project left by an out-of-credits submit - ignore that one |
+| `Processing crashed before it could report. Please try again.` | the render died | submit again |
 | starts with `Cancelled` (state `cancelled`) | stopped in the web app | submit again only if the user wants |
 | empty, or `Processing failed` | unknown failure | FrameOS may re-run it once by itself; check again later, then submit again if it is still failed |
 
@@ -93,9 +93,11 @@ Messages without a code:
 
 | Error | Meaning | What to do |
 |---|---|---|
-| 402 `Out of credits...` | balance is 0 | link https://frameos.studio/pricing and stop; never retry. An empty pending project may be left behind; it costs nothing |
-| 402 `This video is N minutes long and needs N credits, but your workspace has M...` | the length is known at submit (uploaded files, Vimeo) and the balance does not cover it | tell the user the shortfall, link https://frameos.studio/pricing, or suggest a shorter video; never retry |
+| 402 `Out of credits...` | balance is 0 | link https://frameos.studio/pricing and stop; never retry. The project is listed as failed with the same message and `(insufficient_credits)`; it costs nothing |
+| 402 `This video is N minutes long and needs N credits, but your workspace has M...` | the length is known at submit (Vimeo links, or a source an earlier run of this project measured) and the balance does not cover it. M leaves out credits set aside for renders still in progress. The project is listed as failed with the same message | tell the user the shortfall, link https://frameos.studio/pricing, or suggest a shorter video; never retry |
 | 429 `N videos are already processing in this workspace (limit N)...` | the workspace already has the maximum renders running (usually 3); nothing was submitted | show what is rendering with `list_projects`; submit again only after one finishes |
+| 429 `Another video is still being submitted in this workspace. Submit again in a few seconds.` | another submit was in progress at the same moment; nothing was submitted | wait a few seconds and submit once more |
+| 400 `Paste a public video link (http:// or https://), or upload the file.` | the link points at a private or internal address | ask for a public link, or upload the file |
 | 422 `This video is only N seconds long...` | under 30 seconds (caught at submit only when the length is known up front) | use a longer video |
 | 422 `Unsupported aspect ratio` | shape not allowed | use 9:16, 4:5, 3:4, 1:1 or 16:9 |
 | 422 with a list of field errors | link not http(s) or not 8-2048 characters, clip count outside 1-20, or focus text over 1000 characters | fix the field and submit again |
@@ -112,13 +114,15 @@ Messages without a code:
 
 | Error | Meaning | What to do |
 |---|---|---|
-| 404 `Upload link was not issued to this workspace or expired` | the link is over 1 hour old, from another workspace, or was already used to start a render | new `create_upload_link`, upload again, submit |
-| 409 `Video upload has not completed` | the PUT did not finish | repeat the PUT (same link if under 1 hour old), then submit again |
+| 404 `Upload link was not issued to this workspace or expired` | the `gs_path` is not from this workspace | new `create_upload_link`, upload again, submit |
+| 409 `Video upload has not completed` | the PUT did not finish, or this file already rendered successfully (FrameOS then deletes it) | repeat the PUT (same link if under 1 hour old), then submit again; after a successful render, upload the file again |
 | 422 `Invalid uploaded video path` | `gs_path` was changed | pass the exact value from `create_upload_link` |
-| 402 out of credits | balance is 0 | the upload stays usable for the rest of the hour: after the user adds credits, submit the same `gs_path` again |
+| 402 out of credits | balance is 0 | the upload stays usable: after the user adds credits, submit the same `gs_path` again |
 | 500 `GCS not configured`, `GCS storage unavailable`, `could not sign upload URL...`; 503 `Upload tracking unavailable` | temporary FrameOS problem | retry once later |
 
-- Each `gs_path` can start one render only.
+- The upload link (the PUT) expires after 1 hour. The `gs_path` carries the workspace, so it can still be submitted after that.
+- An upload's length is not known at submit: the credit check runs right after FrameOS downloads it, and a shortfall fails the render with `(insufficient_credits)`, charging nothing. The file is kept, so after the user adds credits, submit the same `gs_path` again.
+- Submitting the same `gs_path` again while it renders returns `already_running`; after a failed render it re-runs the same project.
 - After a successful render FrameOS deletes the uploaded source. Another render of the same file (for another shape) needs a new upload and is charged again.
 - Never show the upload URL to the user or write it to a file.
 
@@ -142,7 +146,7 @@ FrameOS estimates about 1.1 x (180 + 0.2 x source seconds + 180 x clip count) se
 
 | Error | Meaning | What to do |
 |---|---|---|
-| 404 `Clip not found` | leftover clip from an earlier run, or not in this workspace | refresh with `list_clips` and skip it |
+| 404 `Clip not found` | a newer run of the project replaced the clip, or it is not in this workspace | refresh with `list_clips` and skip it |
 | 409 `This clip predates editable captions...` | an older clip that cannot be re-rendered | use its `downloadUrl` from `list_clips` if present; otherwise explain it cannot be exported here |
 | 422 `Unknown caption style...` | a bad style was passed or saved | hand off to frameos-captions to set a valid style, then export |
 | 503 `Exports require GCS storage` or `Export requires the Cloud Run worker` | temporary | retry once later |

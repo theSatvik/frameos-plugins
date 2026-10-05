@@ -6,8 +6,7 @@ The full catalogue the FrameOS caption renderer accepts. No tool lists the style
 
 - Send ids in lowercase with hyphens, exactly as written below. The server lowercases and treats underscores as hyphens.
 - Aliases the server accepts: `default`, `shorts-default` and `float` mean `karaoke`; `bounce` means `beasty`; `type` means `deep-diver`. A clip's `captionStyle` can show an alias - new clips usually show the shorts-default alias, sometimes written with an underscore. Read every alias as its canonical style.
-- Any other value is rejected with "Unknown caption style" by `set_caption_style` and `export_clip`.
-- `recaption_clip` does NOT check the id. An unknown id there burns as Karaoke but is saved on the clip as-is, and later exports or posts of that clip fail until `set_caption_style` saves a valid id. Always send a canonical id from the table.
+- Any other value is rejected with "Unknown caption style" by `set_caption_style`, `recaption_clip` and `export_clip`. `recaption_clip` answers with the canonical id it will burn.
 - Every style shows at most 3 words at a time in short chunks. Words per chunk cannot be changed.
 - Captions follow the speech timing of the clip. A clip with no speech has nothing to caption.
 

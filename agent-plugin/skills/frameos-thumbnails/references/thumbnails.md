@@ -22,7 +22,7 @@ Load this when choosing a source, shape or style reference, or when reading a th
 |---|---|---|---|
 | `clip_id` | The clip's rendered video file | Shorts, Reels and TikTok covers; any project made from an uploaded file | On a `free` plan the frames include the small FrameOS watermark (paid plans with a brand logo show that logo instead) |
 | `video_id` (the project ID) | The project's original source video | A thumbnail for the full episode, e.g. the main YouTube upload | Fails for uploaded-file projects - the source file is removed after rendering. Use a clip instead |
-| `url` | A public video link, downloaded fresh | A video that is not in FrameOS yet | Must be a public link of the kind FrameOS can clip (YouTube, Vimeo, Twitch, Kick, public Google Drive file, direct video file). Long videos take longer to download |
+| `url` | A public video link, downloaded fresh | A video that is not in FrameOS yet | Must be a public http(s) link of the kind FrameOS can clip (YouTube, Vimeo, Twitch, Kick, public Google Drive file, direct video file). `gs://` paths, local files and private or internal addresses are refused with "url must be a public http(s) video link". Long videos take longer to download |
 
 The headline is written from what is said in the source. A clip gives a headline about that moment; a full video gives one about the whole episode.
 
@@ -45,7 +45,7 @@ Non-vertical shapes and style references use a newer layout engine. If it cannot
 ## 3. Cost and affordability
 
 - 10 credits per thumbnail delivered. Failed jobs cost nothing.
-- `max_thumbnails` is 1 to 3. Larger values are capped at 3. Never pass 0: it is treated as 3.
+- `max_thumbnails` is 1 to 3. Larger values are capped at 3. 0 or less is refused.
 - FrameOS makes at most as many as the balance covers: affordable = balance divided by 10, rounded down. Example: a balance of 25 asked for 3 delivers at most 2 (20 credits). A balance under 10 is refused as out of credits.
 - A job can deliver fewer images than asked even with enough credits (a design can fail); only delivered images are charged.
 - The balance in `whoami` can lag by up to a minute. `get_usage` shows the live balance and recent spend, including thumbnails.
@@ -95,10 +95,10 @@ Good references:
 - A clear, uncluttered thumbnail at normal thumbnail size.
 
 Rules:
-- It must be a direct `https` link to an image file (jpg or png), publicly reachable. A web page link, a login-only link or a private file will not work.
+- It must be a direct public `http(s)` link to an image file (jpg or png). A web page link, a login-only link or a private file will not work.
 - If the image cannot be downloaded, the job still runs with the house style and gives no warning. If the results look nothing like the reference, say so.
 - Do not encourage copying another creator's branding. If the user points at someone else's thumbnail, mention that a logo or name from it may be carried over and should be checked before use.
-- Never pass storage paths (gs:// links) as a style reference.
+- Storage paths (gs:// links), local files and private or internal addresses are refused with "style_ref must be a public http(s) image link".
 
 ## 7. Designs and labels
 
@@ -133,6 +133,9 @@ Then offer next steps: a different shape, a style reference, or a new run (each 
 | Symptom | Likely cause | Next step |
 |---|---|---|
 | Out of credits when starting | Balance under 10 | Link https://frameos.studio/pricing. Do not retry. |
+| Refused: "url must be a public http(s) video link" | A `gs://` path, local file or private address was sent as `url` | Use `clip_id` or `video_id` for media in FrameOS, or ask for a public link. |
+| Refused: "style_ref must be a public http(s) image link" | The style reference was not a public link | Ask for a direct public image link, or run without one. |
+| Refused with a field error on `max_thumbnails` | 0 or a negative number was sent | Send 1, 2 or 3. |
 | Fewer images than asked | Balance covered fewer, or a design failed | Say how many were delivered and charged. |
 | Asked for 16:9, got 1080 x 1920 | Newer layout engine fell back to vertical | Offer one new attempt (costs again), possibly from another source. |
 | Results ignore the style reference | The image link could not be downloaded or was a web page | Ask for a direct public image link. |

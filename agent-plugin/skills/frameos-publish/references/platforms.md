@@ -47,15 +47,15 @@ What FrameOS keeps from each field, and the platform rules to respect:
 
 | Platform | `title` kept | `description` kept | Final text | Also respect |
 |---|---|---|---|---|
-| YouTube | 95 characters (empty becomes "Clip") | 4500 characters | Title and description separately | No `<` or `>` characters in either field |
-| Facebook | 95 characters (empty becomes "Clip") | 4500 characters; if empty, the title is used | Title and description separately | - |
-| Instagram | 95 characters (empty becomes "Clip") | 4500 characters | title + blank line + description, cut at 2200 | Put the hook in the first line |
-| LinkedIn | 95 characters (empty becomes "Clip") | 4500 characters | title + blank line + description, cut at 3000 | Write for a professional feed |
+| YouTube | 95 characters (empty uses the clip's own title) | 4500 characters | Title and description separately | No `<` or `>` characters in either field |
+| Facebook | 95 characters (empty uses the clip's own title) | 4500 characters; if empty, the title is used | Title and description separately | - |
+| Instagram | 95 characters (may be empty) | 4500 characters | title + blank line + description, cut at 2200; with an empty title, the description alone | Put the hook in the first line |
+| LinkedIn | 95 characters (may be empty) | 4500 characters | title + blank line + description, cut at 3000; with an empty title, the description alone | Write for a professional feed |
 
 Instagram and LinkedIn join the two fields into one text. To control exactly what appears:
 - Text of 95 characters or fewer: all of it in `title`, `description` empty. The post is exactly that text.
 - Longer text: the opening line or sentence (max 95 characters) in `title`, the rest in `description`. FrameOS inserts one blank line between them, so do not start `description` with blank lines.
-- Never leave `title` empty: the post would start with the word "Clip".
+- An empty `title` is fine here: the post is then exactly `description`. (LinkedIn's video title falls back to the clip's own title; it is not part of the post text.)
 - If the first sentence is longer than 95 characters, propose a short hook line to go first (and show it to the user) rather than cutting a sentence in half.
 
 `generate_social_copy` returns `title` (up to 100 characters - shorten to 95 before posting), `caption` (up to 4500), and `hashtags` (up to 10). It sees only the clip's transcript (and its title), never the video frames, so it can miss visual context. It never posts and costs no credits, but it is limited to 30 calls per hour per workspace.
@@ -141,7 +141,7 @@ Platform messages can include raw API text. Summarise it in one sentence; do not
 - `whoami` was called in this conversation.
 - The account is `connected`, on the right platform, and the user picked it.
 - If `exportRequired` is true, the export in the saved style finished.
-- `title` is non-empty and every field is within the limits above.
+- Every field is within the limits above. For YouTube and Facebook the card shows the title that will be used (the clip's own title when `title` is empty).
 - The visibility behaviour for this platform was stated on the card.
 - The card was shown and the user said yes to this exact post.
 - `post_clip` is called once, and the job is followed to the end.

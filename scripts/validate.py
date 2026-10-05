@@ -177,6 +177,8 @@ NON_TOOL_IDENTIFIERS = frozenset({
     "upload_url", "next_offset", "speaker_id", "speaker_label", "diarized_speaker",
     # clips
     "duplicated_from",
+    # export_collection: a clip status and the response's count of those clips
+    "not_started",
     # job failure codes (core/failure_codes.py), shown as "(code)" in job messages
     "source_too_short", "no_clips_found", "no_publishable_clips", "render_failed",
     "source_bot_check", "source_forbidden", "source_rate_limited", "source_download_failed",

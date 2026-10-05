@@ -29,7 +29,7 @@
           "openWorldHint": true,
           "readOnlyHint": false
         },
-        "description": "Submit a video URL for AI clipping. Starts a credit-consuming render job and returns its job ID.",
+        "description": "Submit a video URL for AI clipping. Starts a credit-consuming render job and returns its job ID. focus_prompt is an optional steer; only its first 400 characters are used.",
         "inputSchema": {
           "properties": {
             "source_url": {
@@ -263,7 +263,7 @@
           "openWorldHint": false,
           "readOnlyHint": true
         },
-        "description": "Read a page or time range of the full source-video transcript. New renders store this artifact; older projects may lack it.",
+        "description": "Read a page or time range of the full source-video transcript. start_ms and end_ms are in milliseconds; the returned segments' start and end are in seconds. New renders store this artifact; older projects may lack it.",
         "inputSchema": {
           "properties": {
             "project_id": {
@@ -334,7 +334,7 @@
           "openWorldHint": false,
           "readOnlyHint": false
         },
-        "description": "Get a captioned MP4 download. May start an export job; poll get_job, then call again for its URL.",
+        "description": "Get a captioned MP4 download. May start an export job; poll get_job, then call again for its URL. A call while that job is still running returns the same job.",
         "inputSchema": {
           "properties": {
             "clip_id": {
@@ -531,7 +531,7 @@
           "openWorldHint": false,
           "readOnlyHint": false
         },
-        "description": "Get captioned export URLs or export job IDs for up to 50 clips in a collection.",
+        "description": "Get captioned export URLs or export job IDs for up to 50 clips in a collection. Each call keeps at most 10 clips rendering; clips with status not_started need another call once those finish. A clip already rendering returns its running job.",
         "inputSchema": {
           "properties": {
             "collection_id": {
@@ -584,7 +584,7 @@
           "openWorldHint": false,
           "readOnlyHint": false
         },
-        "description": "Start clipping an uploaded file using the gs_path from create_upload_link. Consumes credits.",
+        "description": "Start clipping an uploaded file using the gs_path from create_upload_link. Consumes credits. focus_prompt is an optional steer; only its first 400 characters are used.",
         "inputSchema": {
           "properties": {
             "gs_path": {
@@ -721,7 +721,7 @@
           "openWorldHint": true,
           "readOnlyHint": false
         },
-        "description": "Generate up to three thumbnails for a clip, project, or URL. Costs FrameOS credits; returns a job ID.",
+        "description": "Generate 1 to 3 thumbnails (max_thumbnails, default 3; a larger number makes 3) from one source: clip_id, video_id, or a public http(s) video url. Use clip_id or video_id for media already in FrameOS; gs:// paths and local files are rejected. style_ref is an optional public http(s) link to an image whose look to match. Costs FrameOS credits; returns a job ID.",
         "inputSchema": {
           "properties": {
             "clip_id": {
@@ -930,7 +930,7 @@
           "openWorldHint": true,
           "readOnlyHint": false
         },
-        "description": "Publish a clip now to a connected social account. Call only when the user explicitly asks to publish.",
+        "description": "Start publishing a clip to a connected social account. Returns a job ID: poll get_job, and when it completes its message is the public post URL. privacy is honoured on YouTube only: on Facebook, private uploads the video unpublished and unlisted posts it publicly; Instagram and LinkedIn posts are always public. A blank title uses the clip's own title. Call only when the user explicitly asks to publish.",
         "inputSchema": {
           "properties": {
             "clip_id": {
@@ -974,5 +974,5 @@
       }
     ]
   },
-  "_source": "FrameOS-Backend mcp_server/frameos_mcp/server.py sha256 dcfffb5ad0b53de23440ea6216e56b773a5418e0f25dff92d647810125a7d57b (origin/main 8587934, 2026-10-03)"
+  "_source": "FrameOS-Backend mcp_server/frameos_mcp/server.py sha256 a86cdba08854332afc9dc698fe48521280050799829eef2f4c3e0c7bee6c6934 (feat/mcp-launch-hardening 254e487, 2026-10-05)"
 }

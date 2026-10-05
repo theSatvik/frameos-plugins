@@ -228,7 +228,7 @@ Collection names are unique; if one already exists, your agent adds to it.
 Export everything in the "October launch" collection.
 ```
 
-For big collections your agent exports clip by clip.
+FrameOS renders up to 10 clips of a collection at a time, so for a big collection your agent asks for the rest once the first ones finish.
 
 ### 28. Where did my credits go?
 

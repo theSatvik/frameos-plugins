@@ -55,7 +55,7 @@ Marks: `[x]` done, `[~]` in progress, `[ ]` not started, `[-]` skipped (say why 
 | 2 Render | `list_projects`: find the project by title, link or date; read its status | processing: keep waiting (frameos-clip); failed: explain and offer a re-run |
 | 3-4 Picks and collection | `list_collections` has the pack's name; `list_clips_in_collection` lists the picks | pick again from `list_clips`, then create or reuse the collection |
 | 5 Caption style | each picked clip's `captionStyle` and `captionAppearance` match the plan | set it again (frameos-captions). If unsure, set it again anyway: it is free and instant |
-| 6 Exports | `export_clip(clip_id)` once per picked clip: ready means done; it does not render again if that style's file exists | rendering: wait on its job. If the last session ended under 2 minutes ago, wait 2 minutes before calling, so you do not start a duplicate render |
+| 6 Exports | `export_clip(clip_id)` once per picked clip: ready means done; it does not render again if that style's file exists | rendering: wait on its job. A call while that export is still rendering returns the same job, never a second render |
 | 7 Thumbnails | `list_thumbnails`, newest first, created after the pack started | ask before making new ones - they cost credits |
 | 8 Copy drafts | not stored in FrameOS | regenerate if the user wants them (free; counts toward the 30-per-hour limit) |
 | 10 Posts | not listed by these tools | ask the user what was already posted; never post again without a fresh confirmation |

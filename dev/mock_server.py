@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import ipaddress
 import json
 import math
 import os
@@ -53,8 +54,9 @@ INSTRUCTIONS = (
 
 MOCK_HOST = "https://mock.frameos.invalid"
 
-# Launch guardrail messages. Keep them identical to the spec handed to the MCP
-# connector owner (FrameOS-Backend task file, section 1, owner decision 2026-10-02).
+# Launch guardrail messages, verbatim from the backend: core/credits.py
+# (SHORTFALL_AT_SUBMIT, SHORTFALL_AFTER_DOWNLOAD) and api/mcp_routes.py
+# (RENDER_CAP_MESSAGE). The skills quote them.
 SHORTFALL_SUBMIT_MESSAGE = (
     "This video is {minutes} minutes long and needs {needed} credits, but your workspace has "
     "{balance}. Add credits or use a shorter video."
@@ -67,6 +69,27 @@ CONCURRENCY_MESSAGE = (
     "{active} videos are already processing in this workspace (limit {limit}). "
     "Wait for one to finish, then submit again."
 )
+# What a typed video source or thumbnail input gets when it is not a public
+# http(s) link (backend/api/routes.py _VIDEO_SOURCE_HINT, api/mcp_routes.py
+# create_thumbnail_job).
+VIDEO_SOURCE_HINT = "Paste a public video link (http:// or https://), or upload the file."
+THUMBNAIL_URL_MESSAGE = (
+    "url must be a public http(s) video link. Use clip_id or video_id for media in this workspace."
+)
+THUMBNAIL_REF_MESSAGE = "{name} must be a public http(s) image link."
+# export_collection keeps at most this many clips rendering per call; the rest
+# come back not_started (api/mcp_routes.py COLLECTION_EXPORT_BATCH).
+COLLECTION_EXPORT_BATCH = 10
+NOT_STARTED_REASON = (
+    "Not started yet, to keep this call short. "
+    "Call export_collection again after the rendering clips finish."
+)
+# A repeat export_clip call returns the running burn for the same artifact for
+# at most this long (api/routes.py EXPORT_BURN_TTL_SECONDS).
+EXPORT_BURN_TTL_SECONDS = 900
+MAX_FOCUS_CHARS = 400  # core/clip_window.py: the render keeps the first 400 characters
+BLOCKED_HOSTS = {"localhost", "metadata.google.internal", "metadata"}  # core/source_downloader.py
+_CONTROL_CHARS = re.compile(r"[\x00-\x1f\x7f]")
 BUCKET = "frameos-mock-bucket"
 DEFAULT_HTTP_PORT = 8790
 
@@ -403,10 +426,63 @@ class _Thumbnails(BaseModel):
     url: str = ""
     video_id: Optional[uuid.UUID] = None
     include_face: bool = False
-    max_thumbnails: Optional[int] = None
+    # At least 1 (MCPThumbnailRequest): 0 or less is a 422; more than 3 makes 3.
+    max_thumbnails: Optional[int] = Field(default=None, ge=1)
     style_ref: str = ""
     aspect: str = "auto"
     clip_id: Optional[uuid.UUID] = None
+
+
+# ---------------------------------------------------------------------------
+# Public-link checks (backend/api/routes.py _is_public_http_url, with the no-DNS
+# host checks from core/source_downloader.py).
+# ---------------------------------------------------------------------------
+def _authority_is_ambiguous(netloc: str) -> bool:
+    return any(ch == "\\" or ch.isspace() or ord(ch) < 0x20 or ord(ch) == 0x7F for ch in netloc)
+
+
+def _host_is_blocked(host: str) -> bool:
+    host = (host or "").strip().lower().rstrip(".")
+    if host in BLOCKED_HOSTS or host.endswith(".internal"):
+        return True
+    try:
+        ip = ipaddress.ip_address(host)
+    except ValueError:
+        return False
+    return any((ip.is_private, ip.is_loopback, ip.is_link_local, ip.is_multicast, ip.is_reserved,
+                ip.is_unspecified))
+
+
+def _is_public_http_url(value: str) -> bool:
+    # Case-sensitive prefixes, like the backend: anything else is not a link.
+    if not value.startswith(("http://", "https://")):
+        return False
+    try:
+        parsed = urlparse(value)
+        host = parsed.hostname
+    except ValueError:
+        return False
+    if _authority_is_ambiguous(parsed.netloc):
+        return False
+    return bool(host) and not _host_is_blocked(host)
+
+
+def _normalize_focus(value: Optional[str]) -> Optional[str]:
+    """core/clip_window.normalize_focus: collapse whitespace, keep 400 characters."""
+    if not isinstance(value, str):
+        return None
+    text = " ".join(value.split()).strip()
+    return text[:MAX_FOCUS_CHARS] or None
+
+
+def _fallback_post_title(clip_title: Optional[str], description: str) -> str:
+    """workers/pipeline_job.py: a blank post title becomes the clip's own title,
+    else the description's first non-blank line."""
+    for candidate in (clip_title or "", *description.splitlines()):
+        text = " ".join(candidate.split())
+        if text:
+            return text
+    return ""
 
 
 # ---------------------------------------------------------------------------
@@ -588,6 +664,7 @@ class Project:
     aspect_ratio: str = "9:16"
     focus_prompt: Optional[str] = None
     credits_charged_minutes: Optional[int] = None
+    credits_hold: Optional[int] = None  # what a checked render was cleared to spend, while it runs
     transcript: Optional[list] = None
     uploaded: bool = False
     source_deleted: bool = False
@@ -636,6 +713,7 @@ class MockState:
         self.social_accounts: list[dict] = []
         self.posts: list[dict] = []
         self.exported: set = set()  # export artifact keys that exist
+        self.export_burns: dict[tuple, tuple] = {}  # (clip id, export key) -> (job id, started at)
         self.upload_claims: dict[str, tuple] = {}  # gs_path -> (filename, expires_at)
         self.issued_uploads: dict[str, float] = {}  # object key -> expires_at
         self.uploaded_objects: dict[str, int] = {}  # object key -> bytes received
@@ -846,8 +924,9 @@ class MockState:
 
     def _seed_legacy_project(self) -> None:
         """An older, completed project: burned-in captions, no stored source
-        transcript, and one clip left over (soft-deleted) from an earlier run that
-        list_clips still returns, like the real route does."""
+        transcript, and one clip from an earlier run that the latest run replaced
+        (soft-deleted). Like the real routes, list_clips and get_project leave the
+        replaced clip out, and its id answers 404."""
         created = self.now() - 40 * 86400
         project = Project(
             id=str(uuid.uuid4()), title=f"{SHOW_NAME}, Ep. 41", source=f"{MOCK_HOST}/sources/build-room-ep41.mp4",
@@ -949,7 +1028,7 @@ class MockState:
 
     @staticmethod
     def _focus_words(focus: Optional[str]) -> list:
-        text = (focus or "")[:400].lower()  # the backend silently keeps 400 chars
+        text = (focus or "")[:MAX_FOCUS_CHARS].lower()  # the backend keeps 400 characters
         return [w for w in re.findall(r"[a-z0-9']+", text) if len(w) >= 4 and w not in _FOCUS_STOPWORDS]
 
     def _make_clips(self, project: Project, segments: list) -> list:
@@ -1007,7 +1086,7 @@ class MockState:
         stages.append(Stage(1.0, "completed", 1.0, f"{n_clips} clips ready", 100))
         return stages
 
-    def _start_render(self, project: Project) -> dict:
+    def _start_render(self, project: Project, hold: Optional[int] = None) -> dict:
         duration = project.known_duration
         if duration is not None and duration < MIN_SOURCE_SECONDS:
             reason = (
@@ -1019,11 +1098,10 @@ class MockState:
             raise FrameOSHTTPError(422, reason)
 
         project.status, project.progress, project.error_message = "processing", 0, None
+        project.credits_hold = hold  # only a start that passed the credit check holds credits
         fail = "no-clips" in project.source.lower()
-        needed = self._credits_needed(project)
-        short = (self.config.guardrails and duration is None and self._balance() < needed)
         segments, _ = self._build_transcript(project)
-        planned = [] if (fail or short) else self._make_clips(project, segments)
+        planned = [] if fail else self._make_clips(project, segments)
         job_id = f"clip:render:{project.id}"
         eta = _eta_seconds(duration, project.max_clips)
 
@@ -1031,10 +1109,19 @@ class MockState:
             if stage.db_progress is not None:
                 project.progress = max(project.progress, stage.db_progress) if stage.state == "processing" \
                     else stage.db_progress
-            if stage.message == "downloading source" and job.eta_seconds is None:
-                # the worker publishes a real ETA once it has measured the source
-                job.eta_seconds = _eta_seconds(project.sim_duration, project.max_clips)
-                job.source_duration_seconds = round(project.sim_duration, 2)
+            if stage.message == "downloading source":
+                if job.eta_seconds is None:
+                    # the worker publishes a real ETA once it has measured the source
+                    job.eta_seconds = _eta_seconds(project.sim_duration, project.max_clips)
+                    job.source_duration_seconds = round(project.sim_duration, 2)
+                shortfall = self._worker_credit_check(project) if self.config.guardrails else None
+                if shortfall:
+                    # Stop before transcribing, as the worker does. It saves the
+                    # measured length, so a resubmit is refused at submit instead.
+                    nxt = job.stages[job.applied + 1]
+                    job.stages[job.applied + 1:] = [Stage(nxt.at, "failed", 1.0, shortfall, 100)]
+                    project.known_duration = project.sim_duration
+                    project.duration_sec = int(round(project.sim_duration))
             if stage.message.startswith("scoring hooks"):
                 project.transcript = segments  # persisted right after transcription
             if stage.state == "completed":
@@ -1042,15 +1129,7 @@ class MockState:
             elif stage.state == "failed":
                 project.status, project.progress, project.error_message = "failed", 100, stage.message
 
-        if short:
-            stages = [
-                Stage(0.0, "pending", 0.0, "queued", 0),
-                Stage(0.12, "processing", 0.05, "downloading source", 5),
-                Stage(0.3, "failed", 1.0, SHORTFALL_WORKER_MESSAGE.format(
-                    minutes=needed, needed=needed, balance=self._balance()), 100),
-            ]
-        else:
-            stages = self._render_stages(project, len(planned), len(segments), fail)
+        stages = self._render_stages(project, len(planned), len(segments), fail)
         self._new_job(job_id, "render", stages, eta=eta, duration=duration, on_stage=on_stage)
         project.job_id = job_id
         return {
@@ -1080,13 +1159,42 @@ class MockState:
             project.credits_charged_minutes = charge
         if project.uploaded:  # uploaded sources are deleted after a successful render
             project.source_deleted = True
+            with self.lock:
+                self.uploaded_objects.pop(project.source[len(f"gs://{BUCKET}/"):], None)
 
+    # ----- credit check (core/credits.py, core/clip_window.py) -------------------
     @staticmethod
-    def _credits_needed(project: Project) -> int:
-        # Billable minutes for the whole source, minus a span this row already paid for.
+    def _credits_needed(project: Project, duration: float) -> int:
+        """What the run would bill, never less than 1: a re-run of a span this row
+        already paid for is free, but still a render."""
         if project.credits_charged_minutes:
-            return 0
-        return max(1, math.ceil(project.sim_duration / 60.0))
+            return 1
+        return max(1, math.ceil(float(duration) / 60.0))
+
+    def _credits_available(self, project: Project) -> int:
+        """The balance less what the workspace's other renders in flight were
+        cleared to spend (their holds). A render is charged only when it finishes."""
+        held = sum(p.credits_hold or 0 for p in self.projects.values()
+                   if p.id != project.id and p.status == "processing")
+        return max(0, self._balance() - held)
+
+    def _credit_shortfall(self, template: str, project: Project, duration: float) -> tuple:
+        """(message or None, credits needed). The minutes are the whole source,
+        rounded up the way the bill rounds them."""
+        needed = self._credits_needed(project, duration)
+        available = self._credits_available(project)
+        if available >= needed:
+            return None, needed
+        minutes = max(1, math.ceil(float(duration) / 60.0))
+        return template.format(minutes=minutes, needed=needed, balance=available), needed
+
+    def _worker_credit_check(self, project: Project) -> Optional[str]:
+        """The worker's half, right after the download, for every render started
+        through MCP. A pass holds the credits until the render ends."""
+        shortfall, needed = self._credit_shortfall(SHORTFALL_WORKER_MESSAGE, project, project.sim_duration)
+        if shortfall is None:
+            project.credits_hold = needed
+        return shortfall
 
     def _start_video(self, source: str, filename: str, max_clips: int, aspect_ratio: str,
                      focus_prompt: Optional[str], *, uploaded: bool = False) -> dict:
@@ -1097,33 +1205,28 @@ class MockState:
             if project.source == source:
                 prior = project
                 break
-        if prior is not None and prior.status in ("pending", "processing"):
-            live = self.jobs.get(f"clip:render:{prior.id}")
-            if live is not None and live.current.state in ("pending", "processing"):
-                return {"project": self._video_response(prior),
-                        "job": {"job_id": f"clip:render:{prior.id}", "status": "already_running"}}
+        if prior is not None and self._render_running(prior):
+            return {"project": self._video_response(prior),
+                    "job": {"job_id": f"clip:render:{prior.id}", "status": "already_running"}}
         if self.config.guardrails:
             # Only renders with a live job count: a row left pending by a failed start
-            # (for example a 402) must not lock the workspace out.
-            active = sum(1 for p in self.projects.values()
-                         if p.status in ("pending", "processing") and (prior is None or p.id != prior.id)
-                         and (job := self.jobs.get(f"clip:render:{p.id}")) is not None
-                         and job.current.state in ("pending", "processing"))
+            # must not lock the workspace out. Checked before any row is made.
+            active = sum(1 for p in self.projects.values() if self._render_running(p))
             if active >= self.config.max_concurrent:
                 raise FrameOSHTTPError(429, CONCURRENCY_MESSAGE.format(active=active, limit=self.config.max_concurrent))
+        # create_video: a typed source must be a public link (an upload's path was
+        # checked by submit_uploaded_video).
+        if not uploaded and (not source or _CONTROL_CHARS.search(source) or not _is_public_http_url(source)):
+            raise FrameOSHTTPError(400, VIDEO_SOURCE_HINT)
         if prior is not None and prior.status in ("failed", "cancelled", "pending", "processing"):
             if prior.status in ("failed", "cancelled"):
                 prior.status, prior.progress, prior.error_message = "pending", 0, None
             project = prior
-            snapshot = self._video_response(project)
-            live = self.jobs.get(f"clip:render:{project.id}")
-            if project.status in ("processing", "pending") and live is not None \
-                    and live.current.state in ("pending", "processing"):
-                return {"project": snapshot,
-                        "job": {"job_id": f"clip:render:{project.id}", "status": "already_running"}}
         else:
             sim = self._sim_duration(source)
-            known = sim if uploaded else self._known_duration_at_submit(source, sim)
+            # The API learns a length at submit only from link metadata (Vimeo). It
+            # has no way to measure an upload: the worker does that after download.
+            known = None if uploaded else self._known_duration_at_submit(source, sim)
             project = Project(
                 id=str(uuid.uuid4()),
                 title=_clean_text(filename) or self._source_title(source),
@@ -1134,24 +1237,36 @@ class MockState:
                 uploaded=uploaded,
             )
             self.projects[project.id] = project
-            snapshot = self._video_response(project)
-        if self._balance() <= 0:
-            raise FrameOSHTTPError(402, "Out of credits. Upgrade your plan or add credits to keep processing.")
-        needed = self._credits_needed(project)
-        if self.config.guardrails and project.known_duration is not None \
-                and project.known_duration >= MIN_SOURCE_SECONDS and self._balance() < needed:
-            raise FrameOSHTTPError(402, SHORTFALL_SUBMIT_MESSAGE.format(
-                minutes=needed, needed=needed, balance=self._balance()))
+        snapshot = self._video_response(project)
+        hold = None
+        try:
+            if self._balance() <= 0:
+                raise FrameOSHTTPError(402, "Out of credits. Upgrade your plan or add credits to keep processing.")
+            if self.config.guardrails and project.known_duration:
+                shortfall, hold = self._credit_shortfall(SHORTFALL_SUBMIT_MESSAGE, project, project.known_duration)
+                if shortfall:
+                    raise FrameOSHTTPError(402, shortfall)
+        except FrameOSHTTPError as exc:
+            # mcp_routes._settle_refused_row: the refused row is failed with the
+            # reason right away, instead of being left pending.
+            if project.status == "pending":
+                project.status, project.progress = "failed", 0
+                project.error_message = f"{exc.detail} (insufficient_credits)"
+            raise
         project.max_clips = max(1, min(20, int(max_clips)))
         project.aspect_ratio = aspect_ratio
-        project.focus_prompt = (focus_prompt or "")[:400] or None
-        job = self._start_render(project)
+        project.focus_prompt = _normalize_focus(focus_prompt)
+        job = self._start_render(project, hold)
         return {"project": snapshot, "job": job}
 
-    def _video_response(self, project: Project, *, count_deleted: bool = False) -> dict:
-        # get_project counts soft-deleted clips too (a real-route bug); the submit
-        # response (create_video) counts only live ones.
-        clips = sum(1 for c in self.clips.values() if c.video_id == project.id and (count_deleted or not c.deleted))
+    def _render_running(self, project: Project) -> bool:
+        live = self.jobs.get(f"clip:render:{project.id}")
+        return project.status in ("pending", "processing") and live is not None \
+            and live.current.state in ("pending", "processing")
+
+    def _video_response(self, project: Project) -> dict:
+        # Clips a re-run replaced (soft-deleted) are not counted.
+        clips = sum(1 for c in self.clips.values() if c.video_id == project.id and not c.deleted)
         return {"id": project.id, "status": project.status, "url": project.source,
                 "filename": project.filename or "", "clips_count": clips, "progress": project.progress / 100.0}
 
@@ -1252,7 +1367,7 @@ class MockState:
         project = self._project(_path_uuid("project_id", project_id))
         if project.status in ("pending", "processing"):
             self._observe_project(project)
-        return self._video_response(project, count_deleted=True)
+        return self._video_response(project)
 
     def get_job(self, job_id: str) -> dict:
         if job_id.startswith("thumb:"):
@@ -1301,7 +1416,7 @@ class MockState:
 
     def list_clips(self, project_id: str) -> list:
         project = self._project(_path_uuid("project_id", project_id))
-        rows = [c for c in self.clips.values() if c.video_id == project.id]  # includes soft-deleted rows
+        rows = [c for c in self.clips.values() if c.video_id == project.id and not c.deleted]
         rows.sort(key=lambda c: (c.rank, c.created_at))
         return [self._safe_clip(c) for c in rows]
 
@@ -1353,6 +1468,8 @@ class MockState:
     def recaption_clip(self, clip_id: str, style: str, appearance: Optional[dict]) -> dict:
         clip_id = _path_uuid("clip_id", clip_id)
         payload = _body(_CaptionStyle, {"style": style, "appearance": appearance})
+        # The same catalogue check as set_caption_style and export_clip, before the clip lookup.
+        resolved = _normalize_caption_style(payload.style or "karaoke")
         clip = self._org_clip(clip_id)
         mode, _ = self._caption_meta(clip)
         if mode == "overlay":
@@ -1363,13 +1480,12 @@ class MockState:
             )
         head, index = self._media_parts(clip)
         look = _appearance_or_422(payload.appearance)
-        raw_style = payload.style or "karaoke"  # NOT validated, exactly like the real route
         job_id = f"recap:{clip_id}:{int(self.now())}"
 
         def on_stage(job: Job, stage: Stage) -> None:
             if stage.state == "completed":
                 meta = dict(clip.caption) if isinstance(clip.caption, dict) else {}
-                meta.update({"mode": "overlay", "style": raw_style})
+                meta.update({"mode": "overlay", "style": resolved})
                 if look:
                     meta["appearance"] = look
                 else:
@@ -1380,14 +1496,25 @@ class MockState:
         stages = [
             Stage(0.0, "pending", 0.0, "queued"),
             Stage(0.3, "processing", 0.1, "loading master"),
-            Stage(0.55, "processing", 0.4, f"burning {raw_style} captions"),
+            Stage(0.55, "processing", 0.4, f"burning {resolved} captions"),
             Stage(0.8, "processing", 0.8, "uploading"),
-            Stage(1.0, "completed", 1.0, f"re-captioned · {raw_style}"),
+            Stage(1.0, "completed", 1.0, f"re-captioned · {resolved}"),
         ]
         self._new_job(job_id, "recap", stages, on_stage=on_stage)
-        return {"job_id": job_id, "clip_id": clip_id, "style": payload.style}
+        return {"job_id": job_id, "clip_id": clip_id, "style": resolved}
 
-    def export_clip(self, clip_id: str, style: Optional[str], filename: Optional[str]) -> dict:
+    def _export_burn_in_flight(self, clip_id: str, key: str) -> Optional[str]:
+        """The job id of a live burn of this export artifact, else None."""
+        marker = self.export_burns.get((clip_id, key))
+        if marker is None or self.now() - marker[1] >= EXPORT_BURN_TTL_SECONDS:
+            return None
+        job = self.jobs.get(marker[0])
+        return marker[0] if job is not None and job.current.state in ("pending", "processing") else None
+
+    def export_clip(self, clip_id: str, style: Optional[str], filename: Optional[str], *,
+                    start: bool = True) -> dict:
+        """With start=False, a clip that would need a new burn returns
+        {status: not_started} instead (export_collection batches its burns)."""
         clip_id = _path_uuid("clip_id", clip_id)
         payload = _body(_Export, {"style": style, "filename": filename})
         clip = self._org_clip(clip_id)
@@ -1402,6 +1529,12 @@ class MockState:
         key = self._export_key(clip, resolved, self._caption_appearance(clip))
         if key in self.exported:
             return {"status": "ready", "style": resolved, "url": self._signed(key, attachment=safe_name)}
+        # A repeat call while this artifact's burn runs gets that job back.
+        running = self._export_burn_in_flight(clip_id, key)
+        if running:
+            return {"status": "rendering", "job_id": running, "style": resolved}
+        if not start:
+            return {"status": "not_started", "style": resolved}
         job_id = f"export:{clip_id}:{int(self.now())}"
 
         def on_stage(job: Job, stage: Stage) -> None:
@@ -1416,6 +1549,7 @@ class MockState:
             Stage(1.0, "completed", 1.0, f"export ready · {resolved}"),
         ]
         self._new_job(job_id, "export", stages, on_stage=on_stage)
+        self.export_burns[(clip_id, key)] = (job_id, self.now())
         return {"status": "rendering", "job_id": job_id, "style": resolved}
 
     # ----- collections ----------------------------------------------------------
@@ -1450,32 +1584,49 @@ class MockState:
             collection["items"].append((clip.id, self.now()))
         return {"collection_id": collection_id, "clip_id": clip.id, "added": added}
 
-    def list_clips_in_collection(self, collection_id: str) -> list:
-        collection = self._collection(_path_uuid("collection_id", collection_id))
-        rows = [self.clips[cid] for cid, _ in sorted(collection["items"], key=lambda item: item[1])
+    def _collection_clips(self, collection_id: str) -> list:
+        collection = self._collection(collection_id)
+        return [self.clips[cid] for cid, _ in sorted(collection["items"], key=lambda item: item[1])
                 if cid in self.clips and not self.clips[cid].deleted]
+
+    def list_clips_in_collection(self, collection_id: str) -> list:
+        rows = self._collection_clips(_path_uuid("collection_id", collection_id))
         return [self._safe_clip(c) for c in rows]
 
     def export_collection(self, collection_id: str) -> dict:
         collection_id = _path_uuid("collection_id", collection_id)
-        items = self.list_clips_in_collection(collection_id)
-        if len(items) > 50:
+        clips = self._collection_clips(collection_id)
+        if len(clips) > 50:
             raise FrameOSHTTPError(422, "Export up to 50 clips per collection")
+        # At most COLLECTION_EXPORT_BATCH clips rendering per call; the rest come
+        # back not_started. (The real route also stops taking clips after 25 s,
+        # which the instant mock never reaches.)
+        rendering = 0
         results = []
-        for item in items:
+        for clip in clips:
             try:
-                export = self.export_clip(item["id"], None, None)
+                export = self.export_clip(clip.id, None, None, start=rendering < COLLECTION_EXPORT_BATCH)
             except FrameOSHTTPError as exc:
                 export = {"status": "unavailable", "reason": exc.detail}
-            results.append({"clip_id": item["id"], **export})
-        return {"collection_id": collection_id, "clips": results}
+            if export["status"] == "rendering":
+                rendering += 1
+            elif export["status"] == "not_started":
+                export["reason"] = NOT_STARTED_REASON
+            results.append({"clip_id": clip.id, **export})
+        return {
+            "collection_id": collection_id,
+            "clips": results,
+            "not_started": sum(1 for result in results if result["status"] == "not_started"),
+        }
 
     # ----- uploads ----------------------------------------------------------------
     def create_upload_link(self, filename: str, content_type: Optional[str]) -> dict:
         payload = _body(_SignedUpload, {"filename": filename, "content_type": content_type})
         name = payload.filename or "upload.mp4"
         ext = name.rsplit(".", 1)[-1].lower() if "." in name else "mp4"
-        key = f"inputs/{uuid.uuid4().hex}.{ext}"
+        ext = re.sub(r"[^a-z0-9]", "", ext)[:8] or "mp4"
+        # The workspace is in the key, so a path in its own folder is its upload.
+        key = f"inputs/{self.org_id}/{uuid.uuid4().hex}.{ext}"
         expires = self.now() + UPLOAD_CLAIM_SECONDS
         gs_path = f"gs://{BUCKET}/{key}"
         with self.lock:
@@ -1499,15 +1650,25 @@ class MockState:
                                                "aspect_ratio": aspect_ratio, "focus_prompt": focus_prompt})
         if not payload.gs_path.startswith(f"gs://{BUCKET}/inputs/"):
             raise FrameOSHTTPError(422, "Invalid uploaded video path")
+        # A path in this workspace's own folder is its upload even after the 1 h
+        # claim expires or is spent; the claim then only adds the filename.
+        own_upload = payload.gs_path.startswith(f"gs://{BUCKET}/inputs/{self.org_id}/")
         claim = self.upload_claims.get(payload.gs_path)
-        if claim is None or claim[1] < self.now():
-            raise FrameOSHTTPError(404, "Upload link was not issued to this workspace or expired")
+        filename = claim[0] if claim is not None and claim[1] >= self.now() else None
+        if not filename:
+            # The claim is spent once a render starts. A project made from the
+            # upload proves it is this workspace's too.
+            prior = next((p for p in sorted(self.projects.values(), key=lambda p: p.created_at, reverse=True)
+                          if p.source == payload.gs_path), None)
+            if prior is None and not own_upload:
+                raise FrameOSHTTPError(404, "Upload link was not issued to this workspace or expired")
+            filename = (prior.filename if prior is not None else None) or ""
         key = payload.gs_path[len(f"gs://{BUCKET}/"):]
         with self.lock:
             present = key in self.uploaded_objects
-        if not present:
+        if not present:  # never uploaded, or deleted after a successful render
             raise FrameOSHTTPError(409, "Video upload has not completed")
-        result = self._start_video(payload.gs_path, claim[0], payload.max_clips, payload.aspect_ratio,
+        result = self._start_video(payload.gs_path, filename, payload.max_clips, payload.aspect_ratio,
                                    payload.focus_prompt, uploaded=True)
         self.upload_claims.pop(payload.gs_path, None)
         return result
@@ -1518,13 +1679,22 @@ class MockState:
         payload = _body(_Thumbnails, {"clip_id": clip_id, "video_id": video_id, "url": url,
                                       "max_thumbnails": max_thumbnails, "include_face": include_face,
                                       "aspect": aspect, "style_ref": style_ref})
-        source_url = (payload.url or "").strip()
+        # Everything an agent types must be a public http(s) link: never a gs://
+        # path or a local file. Stored media goes through clip_id or video_id.
+        typed = {}
+        for name in ("url", "style_ref"):
+            value = (getattr(payload, name) or "").strip()
+            if value and not _is_public_http_url(value):
+                raise FrameOSHTTPError(422, THUMBNAIL_URL_MESSAGE if name == "url"
+                                       else THUMBNAIL_REF_MESSAGE.format(name=name))
+            typed[name] = value
+        source_url = typed["url"]
         title_hint = ""
         topic = ""
         source_gone = False
         source_aspect = "16:9"
         if payload.clip_id is not None:
-            if payload.video_id is not None or payload.url:
+            if payload.video_id is not None or source_url:
                 raise FrameOSHTTPError(422, "Provide clip_id, video_id, or url, not more than one")
             clip = self._org_clip(str(payload.clip_id))
             source_url = f"gs://{BUCKET}/{clip.media}"
@@ -1538,7 +1708,8 @@ class MockState:
                           if c.video_id == project.id and not c.deleted), "")
         if not source_url:
             raise FrameOSHTTPError(400, "A video link is required.")
-        requested = payload.max_thumbnails if payload.max_thumbnails else THUMBNAIL_MAX
+        # Only a missing count means the default; more than 3 makes 3.
+        requested = THUMBNAIL_MAX if payload.max_thumbnails is None else payload.max_thumbnails
         n = max(1, min(THUMBNAIL_MAX, int(requested)))
         affordable = self._balance() // THUMBNAIL_CREDITS_PER
         if affordable < 1:
@@ -1549,9 +1720,7 @@ class MockState:
         if aspect_key not in THUMBNAIL_ASPECTS:
             raise FrameOSHTTPError(400, f"Unsupported aspect {payload.aspect!r}. Use one of: "
                                         f"{sorted(THUMBNAIL_ASPECTS)}")
-        ref = (payload.style_ref or "").strip()
-        if ref and not ref.startswith(("gs://", "http://", "https://")):
-            raise FrameOSHTTPError(400, "style_ref must be a gs:// or http(s) URL.")
+        ref = typed["style_ref"]
         job_id = f"thumb:{self.org_id}:{int(self.now() * 1000)}"
         width, height = THUMB_CANVAS[source_aspect if aspect_key == "auto" else aspect_key]
         title = title_hint or "Your next favourite video"
@@ -1682,8 +1851,16 @@ class MockState:
             stages.append(Stage(1.0, "completed", 1.0, urls[platform]))
         else:
             stages.append(Stage(0.5, "failed", 1.0, f"posting to {platform} is not supported yet"))
+        # What the worker posts: a blank title falls back to the clip's own title
+        # (else the description's first line). Instagram and LinkedIn post one
+        # text built only from what was sent; a title field of its own (YouTube,
+        # Facebook, LinkedIn's video title) gets the fallback.
+        typed_title = (payload.title or "").strip()[:95]
+        description = (payload.description or "").strip()[:4500]
+        title = typed_title or _fallback_post_title(self._clip_title(clip)[:95], description)
+        body = "\n\n".join(x for x in (typed_title, description) if x) or title
         record = {"clip_id": clip.id, "account_id": account["id"], "platform": platform,
-                  "title": (payload.title or "").strip()[:95], "description": (payload.description or "").strip()[:4500],
+                  "title": title, "description": description, "body": body,
                   "privacy": effective, "url": urls.get(platform), "job_id": job_id, "published": False}
 
         def on_stage(job: Job, stage: Stage) -> None:
@@ -1731,7 +1908,7 @@ def create_server(state: Optional[MockState] = None) -> MCPServer:
         aspect_ratio: Literal["9:16", "3:4", "4:5", "1:1", "16:9"] = "9:16",
         focus_prompt: str | None = None,
     ) -> dict:
-        """Submit a video URL for AI clipping. Starts a credit-consuming render job and returns its job ID."""
+        """Submit a video URL for AI clipping. Starts a credit-consuming render job and returns its job ID. focus_prompt is an optional steer; only its first 400 characters are used."""
         return _call(state, state.submit_video, source_url, max_clips, aspect_ratio, focus_prompt)
 
     @server.tool(title="List Projects", annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False))
@@ -1778,7 +1955,7 @@ def create_server(state: Optional[MockState] = None) -> MCPServer:
         limit: int = 100,
         include_words: bool = False,
     ) -> dict:
-        """Read a page or time range of the full source-video transcript. New renders store this artifact; older projects may lack it."""
+        """Read a page or time range of the full source-video transcript. start_ms and end_ms are in milliseconds; the returned segments' start and end are in seconds. New renders store this artifact; older projects may lack it."""
         return _call(state, state.get_transcript, project_id, start_ms, end_ms, offset, limit, include_words)
 
     @server.tool(title="Get Brand", annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False))
@@ -1788,7 +1965,7 @@ def create_server(state: Optional[MockState] = None) -> MCPServer:
 
     @server.tool(title="Export Clip", annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
     async def export_clip(clip_id: str, style: str | None = None, filename: str | None = None) -> dict:
-        """Get a captioned MP4 download. May start an export job; poll get_job, then call again for its URL."""
+        """Get a captioned MP4 download. May start an export job; poll get_job, then call again for its URL. A call while that job is still running returns the same job."""
         return _call(state, state.export_clip, clip_id, style, filename)
 
     @server.tool(title="Duplicate Clip", annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
@@ -1818,7 +1995,7 @@ def create_server(state: Optional[MockState] = None) -> MCPServer:
 
     @server.tool(title="Export Collection", annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
     async def export_collection(collection_id: str) -> dict:
-        """Get captioned export URLs or export job IDs for up to 50 clips in a collection."""
+        """Get captioned export URLs or export job IDs for up to 50 clips in a collection. Each call keeps at most 10 clips rendering; clips with status not_started need another call once those finish. A clip already rendering returns its running job."""
         return _call(state, state.export_collection, collection_id)
 
     @server.tool(title="Create Upload Link", annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
@@ -1833,7 +2010,7 @@ def create_server(state: Optional[MockState] = None) -> MCPServer:
         aspect_ratio: Literal["9:16", "3:4", "4:5", "1:1", "16:9"] = "9:16",
         focus_prompt: str | None = None,
     ) -> dict:
-        """Start clipping an uploaded file using the gs_path from create_upload_link. Consumes credits."""
+        """Start clipping an uploaded file using the gs_path from create_upload_link. Consumes credits. focus_prompt is an optional steer; only its first 400 characters are used."""
         return _call(state, state.submit_uploaded_video, gs_path, max_clips, aspect_ratio, focus_prompt)
 
     @server.tool(title="Set Caption Style", annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
@@ -1856,7 +2033,7 @@ def create_server(state: Optional[MockState] = None) -> MCPServer:
         aspect: Literal["auto", "16:9", "9:16", "1:1", "4:5", "3:4"] = "auto",
         style_ref: str = "",
     ) -> dict:
-        """Generate up to three thumbnails for a clip, project, or URL. Costs FrameOS credits; returns a job ID."""
+        """Generate 1 to 3 thumbnails (max_thumbnails, default 3; a larger number makes 3) from one source: clip_id, video_id, or a public http(s) video url. Use clip_id or video_id for media already in FrameOS; gs:// paths and local files are rejected. style_ref is an optional public http(s) link to an image whose look to match. Costs FrameOS credits; returns a job ID."""
         return _call(state, state.create_thumbnail_job, clip_id, video_id, url, max_thumbnails, include_face,
                      aspect, style_ref)
 
@@ -1892,7 +2069,7 @@ def create_server(state: Optional[MockState] = None) -> MCPServer:
         description: str = "",
         privacy: Literal["public", "unlisted", "private"] = "public",
     ) -> dict:
-        """Publish a clip now to a connected social account. Call only when the user explicitly asks to publish."""
+        """Start publishing a clip to a connected social account. Returns a job ID: poll get_job, and when it completes its message is the public post URL. privacy is honoured on YouTube only: on Facebook, private uploads the video unpublished and unlisted posts it publicly; Instagram and LinkedIn posts are always public. A blank title uses the clip's own title. Call only when the user explicitly asks to publish."""
         return _call(state, state.post_clip, clip_id, account_id, title, description, privacy)
 
     server.mock_state = state  # type: ignore[attr-defined]

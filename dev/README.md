@@ -104,16 +104,22 @@ Errors surface as tool errors with the real server's text, `FrameOS returned HTT
 
 | Trigger | Result |
 |---|---|
-| `FRAMEOS_MOCK_CREDITS=0` | `submit_video` / `submit_uploaded_video`: 402 `Out of credits. Upgrade your plan or add credits to keep processing.` Thumbnails return 402 below 10 credits. |
+| `FRAMEOS_MOCK_CREDITS=0` | `submit_video` / `submit_uploaded_video`: 402 `Out of credits. Upgrade your plan or add credits to keep processing.` The project is marked `failed` with that message plus `(insufficient_credits)`. Thumbnails return 402 below 10 credits. |
+| A balance below the video's length (see `FRAMEOS_MOCK_GUARDRAILS`) | Vimeo links: 402 `This video is N minutes long and needs N credits, but your workspace has M. Add credits or use a shorter video.` at submit. YouTube links and uploads: the render fails right after download with `... Nothing was charged. (insufficient_credits)`, and a resubmit of the same source then gets the 402 at submit. |
 | Source URL containing `too-short` | 422 `This video is only 12 seconds long, which is too short to pull a highlight out of. ...` The project is left `failed` with `(source_too_short)`. |
 | Source URL containing `no-clips` | The render job fails at the scoring step with the real `(no_clips_found)` message, and no credits are charged. |
 | Unknown UUID | 404 with the route's own detail: `Video not found`, `Clip not found`, `Project not found`, `Collection not found`, `Job not found`. |
 | Not a UUID, or a parameter out of range | 422 with FastAPI's list-shaped detail, e.g. `[{'type': 'uuid_parsing', 'loc': ['path', 'project_id'], ...}]` |
-| Unknown caption style, font or animation | 422 `Unknown caption style: X` / `Unknown caption font: X` / `Unknown caption animation: X` |
+| Unknown caption style, font or animation | 422 `Unknown caption style: X` / `Unknown caption font: X` / `Unknown caption animation: X` (`set_caption_style`, `recaption_clip` and `export_clip` all check the style) |
+| A private or internal link (`localhost`, `10.x`, `192.168.x`, `169.254.x`, `*.internal`) to `submit_video` | 400 `Paste a public video link (http:// or https://), or upload the file.` No project is made. |
+| `create_thumbnail_job` with `max_thumbnails` 0 or less | 422 with FastAPI's list-shaped detail (`greater_than_equal`, `loc` `['body', 'max_thumbnails']`). More than 3 makes 3. |
+| `create_thumbnail_job` with a `url` or `style_ref` that is not a public http(s) link (a `gs://` path, a local path, a private address) | 422 `url must be a public http(s) video link. Use clip_id or video_id for media in this workspace.` / 422 `style_ref must be a public http(s) image link.` |
 | `set_caption_style` on a burned (legacy) clip | 409 `This clip has burned-in captions — use POST /clips/{id}/recaption.` |
 | `recaption_clip` on an overlay clip | 409 `This clip uses overlay captions — set the style via PATCH /clips/{id}/captions (instant); burning happens on export.` |
 | `post_clip` before exporting the saved style | 409 `Captions for this clip aren't rendered yet. Export the clip first, then post.` |
-| `submit_uploaded_video` before the PUT / twice | 409 `Video upload has not completed` / 404 `Upload link was not issued to this workspace or expired` |
+| `submit_uploaded_video` before the PUT, or after that upload rendered successfully (the source is deleted) | 409 `Video upload has not completed` |
+| `submit_uploaded_video` with a path outside `gs://frameos-mock-bucket/inputs/<workspace id>/` that has no upload claim | 404 `Upload link was not issued to this workspace or expired` (outside `gs://frameos-mock-bucket/inputs/`: 422 `Invalid uploaded video path`) |
+| `focus_prompt` over 1,000 characters | 422 with FastAPI's list-shaped detail (`string_too_long`) |
 | 31st `generate_social_copy` call in an hour | 429 `Social copy limit reached; try again in an hour` |
 | Duplicate collection name | 409 `A collection with that name already exists` |
 
@@ -124,11 +130,11 @@ Errors surface as tool errors with the real server's text, `FrameOS returned HTT
 | `FRAMEOS_MOCK_CREDITS` | `120` | Starting credit balance. |
 | `FRAMEOS_MOCK_PLAN` | `starter` | `plan` reported by `whoami` (`free`, `starter` or `pro`). It changes nothing else. |
 | `FRAMEOS_MOCK_SPEED` | `fast` | `fast`: jobs advance on each status check. A render completes on the 3rd check (also counting `get_project` and `list_projects`), exports, re-captions and thumbnails on the 2nd, posts on the 3rd. A number N: jobs advance by wall-clock time instead, with a render taking N seconds, exports and re-captions N/4, thumbnails 0.4N, posts 0.3N. |
-| `FRAMEOS_MOCK_SEED` | `1` | `0` starts with no projects. By default there is one older project with burned-in captions, no stored transcript, and one stale clip. |
+| `FRAMEOS_MOCK_SEED` | `1` | `0` starts with no projects. By default there is one older project with burned-in captions, no stored transcript, and one clip that a later run replaced (not listed; its id answers 404). |
 | `FRAMEOS_MOCK_SOCIAL` | `1` | `0` starts with no connected social accounts. By default there is one each for YouTube, Instagram, LinkedIn and Facebook. |
 | `FRAMEOS_MOCK_BRAND_LOGO` | `0` | `1` makes `get_brand` return a logo. |
 | `FRAMEOS_MOCK_ERRORS` | `detailed` | `opaque` is a legacy option: it reproduces the bare errors the real server showed before it switched to `ToolError` (see below). |
-| `FRAMEOS_MOCK_GUARDRAILS` | on | The launch guardrails: a render starts only when the balance covers the video (402 at submit when the length is known, `(insufficient_credits)` after download otherwise), and at most `FRAMEOS_MOCK_MAX_CONCURRENT` renders run at once (429). Set `0` to switch them off. |
+| `FRAMEOS_MOCK_GUARDRAILS` | on | The launch guardrails: a render starts only when the balance covers the video, less the credits other renders in flight hold (402 at submit when the length is known, `(insufficient_credits)` right after download otherwise, which is always the case for uploads), and at most `FRAMEOS_MOCK_MAX_CONCURRENT` renders run at once (429). Set `0` to switch them off. |
 | `FRAMEOS_MOCK_MAX_CONCURRENT` | `3` | The render limit per workspace. |
 | `FRAMEOS_MOCK_UPLOAD_PORT` | `0` | stdio mode only: the port for the upload receiver (`0` = any free port). In HTTP mode, uploads go to the same port as `/mcp`. |
 | `FRAMEOS_MOCK_QUIET` | unset | `1` drops the one-line startup message on stderr. |
@@ -138,23 +144,26 @@ Errors surface as tool errors with the real server's text, `FrameOS returned HTT
 The skills have to cope with these, so the mock keeps them:
 
 - **Progress units.** `progress` runs 0-100 in `list_projects`, but 0-1 in `get_project` and `get_job`.
-- **ETA.** For YouTube links, `eta_seconds` stays `null` until the worker has downloaded the source. Vimeo links get an ETA at submit.
+- **ETA.** For YouTube links and uploads, `eta_seconds` stays `null` until the worker has downloaded the source. Vimeo links get an ETA at submit.
 - **Job IDs.**
   - The formats are `clip:render:<video>`, `export:<clip>:<unix_s>`, `recap:<clip>:<unix_s>`, `social:post:<clip>:<unix_s>` and `thumb:<org>:<unix_ms>`.
   - Thumbnails return a camelCase `jobId`.
   - An owned job ID with no state polls as `pending` forever.
 - **Exports.**
   - New clips are `overlay` clips with `exportRequired: true` and a `null` `downloadUrl`. Their `url` and `previewUrl` are caption-free.
-  - Each `export_clip` call made before the export exists starts another burn job.
-- **Captions.**
-  - `recaption_clip` does not validate the style.
-  - Calling `set_caption_style` without `appearance` clears any saved overrides.
-- **Stale clips.** `list_clips` and `get_project` still count a soft-deleted clip from an earlier run, which then returns 404 on `describe_clip`.
-- **Stray project on 402.** A 402 at submit leaves a stray `pending` project with no job. After 30 minutes it is marked failed as "Processing crashed before it could report".
+  - A repeat `export_clip` call while a burn of the same clip and look is still running returns that job (for up to 15 minutes); it does not start another.
+  - `export_collection` keeps at most 10 clips rendering per call. The rest come back `{"status": "not_started", "style": ..., "reason": "Not started yet, ..."}`, and the response's `not_started` field counts them; call again once the rendering ones finish.
+- **Captions.** Calling `set_caption_style` without `appearance` clears any saved overrides.
+- **Refused project on 402.** A 402 at submit still creates (or reuses) the project, and marks it `failed` right away with the 402 message plus `(insufficient_credits)`.
+- **Credit holds.** A render that passed the credit check holds the credits it needs until it ends. Other submits are checked against the balance less those holds, and the 402 message reports that smaller number.
 - **Resubmitting.** Resubmitting a link that is still rendering returns `status: "already_running"` and ignores the new settings. A failed link re-runs in the same project. A completed link creates a new project, which is charged in full again, because the record of paid minutes belongs to the project, not the link.
-- **Uploads.** Uploaded sources are deleted after a successful render, so a thumbnail job by `video_id` for that project fails. Making it by `clip_id` works.
+- **Uploads.**
+  - `create_upload_link` returns `gs://frameos-mock-bucket/inputs/<workspace id>/<hex>.<ext>`. A path in the workspace's own folder can be submitted after its 1-hour claim expires or once it is spent, so resubmitting it while it renders returns `already_running`, and after a failed render re-runs the same project.
+  - The API can't measure an upload, so there is no credit check, ETA or length at submit; the worker checks after download.
+  - Uploaded sources are deleted after a successful render, so a thumbnail job by `video_id` for that project fails. Making it by `clip_id` works.
 - **Transcripts.** `get_transcript` takes milliseconds and returns seconds.
-- **Focus prompt.** `focus_prompt` is silently cut to 400 characters and matched on words.
+- **Focus prompt.** `focus_prompt` takes up to 1,000 characters, but whitespace is collapsed and only the first 400 characters are used, matched on words.
+- **Post titles.** A blank `post_clip` title falls back to the clip's own title (else the description's first line). Instagram and LinkedIn post one text built only from what was sent. `MockState.posts` records the `title` and that `body`.
 
 ## Error text: fixed in the real server
 
@@ -175,7 +184,8 @@ The real server now raises `ToolError`, so agents see `FrameOS returned HTTP <co
   - `cancelled` jobs;
   - 503s ("Render queue unreachable", "Export requires the Cloud Run worker", "FrameOS API is unavailable");
   - partial publishes, and Instagram's long processing.
-- **Caching and timing.** The real API caches the account (60 s) and the project list (20 s), and its tool calls time out after 45 s. The mock does neither.
+- **Caching and timing.** The real API caches the account (60 s) and the project list (20 s), and its tool calls time out after 45 s. The mock does neither. `export_collection` also stops starting clips after 25 s and returns the rest as `not_started`; mock exports start instantly, so only the 10-clip limit shows.
+- **Overlapping submits.** The real API takes one submit per workspace at a time and answers 429 `Another video is still being submitted in this workspace. Submit again in a few seconds.` when one waits too long. The mock handles one call at a time, so submits never overlap and this 429 never appears.
 - **Language.** Transcripts are English only. Translation, missing word timings and speaker fields are not simulated.
 - **Visual effects.** There is no watermark, brand-logo, plan or pack behaviour. `plan` is just a label.
 - **Multiple workspaces.** There is one workspace, so cross-workspace 404s only show up as "unknown ID".
@@ -187,7 +197,8 @@ The real server now raises `ToolError`, so agents see `FrameOS returned HTTP <co
 
 - schema parity with the snapshot;
 - the full flow over the MCP protocol: submit, poll, list clips, export (rendering), poll, export (ready), then a bad caption style;
-- the 402, 404, 409 and 422 paths, uploads, thumbnails, posting and collections;
+- the 400, 402, 404, 409 and 422 paths, uploads, thumbnails, posting and collections;
+- the backend's launch rules: the credit check at submit and after download (with holds), the refused project marked failed, the render limit, repeat exports returning the running job, collection exports in batches of 10, the thumbnail input checks, the `focus_prompt` limits and the post-title fallback;
 - both transports, stdio and HTTP.
 
 The tests are skipped when `mcp` is not installed, so `python3 scripts/test.py` stays stdlib-only. To run them:

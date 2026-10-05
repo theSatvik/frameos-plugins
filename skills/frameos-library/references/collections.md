@@ -31,20 +31,25 @@ An export burns the captions into an MP4, using each clip's saved caption style 
 2. If the user wants a different caption look, restyle the clips first with frameos-captions. The export uses whatever style is saved on each clip.
 3. Pick the path:
    - N is 0: nothing to export. Say so.
-   - N is 1-10: path A, one collection call.
-   - N is 11-50: path B, clip by clip. One collection call would start every render inside a single request that can time out.
+   - N is 1-50: path A, collection calls.
    - N is over 50: the collection export refuses. Use path B, or ask which clips the user actually needs.
 
-### Path A - one collection call (1-10 clips)
+### Path A - collection calls (1-50 clips)
 
-1. Call `export_collection(collection_id)` exactly once.
+Each `export_collection` call keeps at most 10 clips rendering. Clips past that come back `not_started` and need another call once the rendering ones finish. A clip that is already rendering comes back with its running job, never a second render.
+
+1. Call `export_collection(collection_id)` once.
 2. Read each entry in its list of clips:
    - ready: it carries a download link. Done.
    - rendering: it carries a job id. Put the clip and its job id on the wait list.
+   - not_started: held back to keep the call short. Leave it for the next call.
    - unavailable: it carries a reason. Explain it in plain words (for example, the clip was made before captions became editable, or it no longer exists). Do not retry that clip in this run.
-3. If the call itself fails or times out, do NOT call it again: renders may already have started. Wait about 2 minutes, then run path B step 2 for every clip in the collection. Clips whose render already finished come back ready without a new render.
+   The response's `not_started` field counts the clips still waiting.
+3. Wait for the wait list (below). For collecting links you can skip that section's step 4: the next collection call returns them.
+4. When the wait list is empty, call `export_collection` once more. Finished clips come back ready with their links, and up to 10 clips that were `not_started` start rendering. Repeat steps 2-4 until no clip is rendering or `not_started`.
+5. If the call itself fails or times out, wait about 2 minutes and call it once more: clips already rendering return their running job and finished ones come back ready. If it fails again, use path B.
 
-### Path B - clip by clip (more than 10 clips, or after a failed collection call)
+### Path B - clip by clip (more than 50 clips, or after collection calls keep failing)
 
 1. Work in batches of up to 10 clips.
 2. For each clip in the batch, call `export_clip(clip_id)` once, with no style:
@@ -62,7 +67,7 @@ An export burns the captions into an MP4, using each clip's saved caption style 
 3. An export usually takes 15-60 seconds. Cap the total wait at about 5 minutes per batch.
 4. For each completed job, call `export_clip(clip_id)` once more, with the same arguments as before (no style), to get its download link.
 5. For a failed job, read its message and tell the user. Offer one retry later (a single `export_clip` call for that clip); never loop.
-6. At the 5-minute cap: report what is ready, list what is still rendering, and stop. Later, check those jobs with `get_job` and finish step 4. Never call `export_clip` or `export_collection` for a clip while its job is still rendering - each extra call starts another render.
+6. At the 5-minute cap: report what is ready, list what is still rendering or not started, and stop. Later, check those jobs with `get_job` and finish step 4 (or path A step 4). Do not call `export_clip` or `export_collection` again while jobs are still rendering: an extra call only returns the same jobs.
 7. If the host cannot wait between checks (a chat-only app), report progress after the first round and ask the user to say "are my FrameOS exports ready?" in a minute or two. Then resume at step 1 with the same wait list.
 
 ### Delivering
