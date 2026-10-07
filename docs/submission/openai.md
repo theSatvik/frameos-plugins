@@ -55,7 +55,7 @@ ChatGPT's OAuth expectations:
 
 ## 5. Tool annotations
 
-The portal requires explicit `readOnlyHint`, `openWorldHint` and `destructiveHint` on **every** tool, each with a justification. Current values come from [`tests/fixtures/mcp-snapshot.json`](../../tests/fixtures/mcp-snapshot.json) (the backend's main branch, 2026-10-03), where every tool now sets all three and has a `title`. The proposal is for the MCP connector owner to confirm (annotations live in the connector, not in this repo). Three proposals still differ from the current values: `set_caption_style` and `recaption_clip` (`destructiveHint` is false today) and `generate_social_copy` (`readOnlyHint` is false today).
+The portal requires explicit `readOnlyHint`, `openWorldHint` and `destructiveHint` on **every** tool, each with a justification. Current values come from [`tests/fixtures/mcp-snapshot.json`](../../tests/fixtures/mcp-snapshot.json) (the backend's main branch, 2026-10-03), where every tool now sets all three and has a `title`. Annotations live in the connector, not in this repo. Three proposals still differ from the current values: `set_caption_style` and `recaption_clip` (`destructiveHint` is false today) and `generate_social_copy` (`readOnlyHint` is false today).
 
 Key: RO = readOnlyHint, D = destructiveHint, OW = openWorldHint.
 

@@ -40,7 +40,7 @@ These are owned by the MCP connector work, not by this repo:
 1. **Clerk scope.** Done: `frameos:mcp` is created and advertised. It is also in the default scopes for dynamic clients, which the clients marked below need.
 2. **Clerk client onboarding.** Partly done. CIMD is on, but only pre-registered clients are admitted, and only Claude Code is registered. Each other app is enabled once its CIMD client is pre-registered or admission is opened. DCR is not enabled: Gemini CLI has no CIMD support and needs it (or a pre-registered client), and Cursor, Copilot CLI, Devin and Perplexity rely on it.
 3. **Live endpoint and well-known routes.** Done.
-4. **Launch guardrails** (owner decision, 2026-10-02). **Built in a connector update that is not deployed yet.** The connector is open to every FrameOS plan, with credits as the only gate. Two server-side checks:
+4. **Launch guardrails** (owner decision, 2026-10-02). **Done (deployed 2026-10-06).** The connector is open to every FrameOS plan, with credits as the only gate. Two server-side checks:
    - A render starts only when the balance covers the video, less the credits held by renders already in progress. The check runs at submit when the length is known (a refused project is marked failed with the reason); otherwise, and always for uploads, the worker checks right after download and fails with `(insufficient_credits)`, charging nothing.
    - At most 3 renders process at once per workspace. Over the limit, the server returns 429. Submits in one workspace are taken one at a time; one that waits too long gets a 429 asking to submit again in a few seconds.
 
@@ -75,7 +75,7 @@ Which clients ask for `frameos:mcp` on their own (from client source and docs; c
 
 ## Open issues in the MCP connector
 
-These were found while building the packages and are for the owner of the FrameOS MCP connector to fix. This repo does not change the connector. The skills already work around the agent-visible ones where they can.
+These were found while building the packages and are fixed in the FrameOS MCP connector, not in this repo. The skills already work around the agent-visible ones where they can.
 
 **Sign-in and directory readiness**
 
@@ -84,7 +84,7 @@ These were found while building the packages and are for the owner of the FrameO
 
 **Behaviour an agent can see**
 
-Fixed in the connector update that is not deployed yet. The skills, the mock and the tool snapshot already follow it:
+Fixed in the connector update deployed on 2026-10-06. The skills, the mock and the tool snapshot follow it:
 
 - Listing a project's clips leaves out clips from an earlier run.
 - Calling export again while an export runs returns the same job instead of starting another render. A collection export keeps at most 10 clips rendering per call and returns the rest as `not_started` for a later call, so it stays within the per-call time limit.
@@ -120,4 +120,4 @@ curl -s https://frameos.studio/.well-known/oauth-protected-resource/mcp | python
 curl -s https://clerk.frameos.studio/.well-known/oauth-authorization-server | python3 -m json.tool | grep -E 'issuer|scopes_supported|registration_endpoint|client_id_metadata' -A8
 ```
 
-Expect a 401 whose `WWW-Authenticate` carries `resource_metadata` and `scope="frameos:mcp"`, then a 200 from the well-known route. These checks can't show which apps are pre-registered. When the connector owner reports that an app's client is registered (or admission is opened, or a `registration_endpoint` appears for DCR-only apps such as Gemini CLI), run that app's install guide "Check it works" step and update the table above.
+Expect a 401 whose `WWW-Authenticate` carries `resource_metadata` and `scope="frameos:mcp"`, then a 200 from the well-known route. These checks can't show which apps are pre-registered. When an app's client is registered (or admission is opened, or a `registration_endpoint` appears for DCR-only apps such as Gemini CLI), run that app's install guide "Check it works" step and update the table above.

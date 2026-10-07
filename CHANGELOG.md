@@ -6,7 +6,7 @@ All notable changes to the FrameOS plugin, skills and extension packages. The fo
 
 ### Changed
 
-- Synced with the FrameOS connector's launch-hardening update, which is not deployed yet. The tool snapshot (`tests/fixtures/mcp-snapshot.json`) and `evals/mocks/frameos/_tools.json` carry its new descriptions for `submit_video`, `submit_uploaded_video`, `get_transcript`, `export_clip`, `export_collection`, `create_thumbnail_job` and `post_clip`; tool names, parameters, titles and annotations are unchanged.
+- Synced with the FrameOS connector's launch-hardening update (deployed 2026-10-06). The tool snapshot (`tests/fixtures/mcp-snapshot.json`) and `evals/mocks/frameos/_tools.json` carry its new descriptions for `submit_video`, `submit_uploaded_video`, `get_transcript`, `export_clip`, `export_collection`, `create_thumbnail_job` and `post_clip`; tool names, parameters, titles and annotations are unchanged.
 - The mock server follows the update: the credit check with holds for renders in flight, a refused project marked failed with `(insufficient_credits)`, no credit check at submit for uploads, upload paths under the workspace's own folder, repeat exports returning the running job, collection exports in batches of 10 with `not_started`, public-link checks on video links and thumbnail inputs, `max_thumbnails` of at least 1, `recaption_clip` style checks, replaced clips left out of `list_clips` and `get_project`, and the post-title fallback to the clip's own title.
 - Skills: updated for the same behaviour (exports, collection batches, thumbnail inputs, post titles, upload resubmits, the new 400 and 429 messages, and re-captioning).
 
@@ -32,5 +32,4 @@ First version. The hosted FrameOS connector (`https://frameos.studio/mcp`) is li
 
 - Only Claude Code can sign in. FrameOS's sign-in server admits only pre-registered apps for now, and Claude Code is the only one registered; the other hosts (claude.ai and Claude Desktop, ChatGPT, Codex, Cursor, Gemini CLI, VS Code and Copilot, Perplexity) are coming soon. Dynamic Client Registration is off.
 - Signing in through the Claude Code plugin's own connection (`plugin:frameos:frameos`) has not been tested yet; connecting the connector directly has.
-- The launch guardrails (a render starts only when the balance covers the video; at most 3 renders at once) are still in progress on the server. The skills and the mock already follow them.
-- See [docs/status.md](docs/status.md) for the full list of open items for the MCP connector owner.
+- See [docs/status.md](docs/status.md) for the full list of open items.

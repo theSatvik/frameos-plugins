@@ -1,6 +1,6 @@
 # FrameOS for AI agents
 
-Turn your long videos into short clips by asking the AI agent you already use. Paste a podcast, stream, interview or webinar link into Claude, ChatGPT, Codex, Cursor, Gemini CLI, GitHub Copilot or Perplexity, and FrameOS finds the strongest moments, reframes them for your format, adds captions and hands you back a ranked list of clips. You stay in charge of what gets exported, captioned, thumbnailed and posted.
+Turn your long videos into short clips by asking the AI agent you already use. Paste a podcast, stream, interview or webinar link into Claude Code today (Claude, ChatGPT, Codex, Cursor, Gemini CLI, GitHub Copilot and Perplexity are coming soon), and FrameOS finds the strongest moments, reframes them for your format, adds captions and hands you back a ranked list of clips. You stay in charge of what gets exported, captioned, thumbnailed and posted.
 
 This repo holds the official FrameOS plugin, skills and extension packages. They connect your agent to the hosted FrameOS connector (an MCP server at `https://frameos.studio/mcp`) and teach it how to use FrameOS well: when to check your credits, how long to wait for a render, which caption styles exist, and never to post anything without your go-ahead.
 
@@ -38,7 +38,7 @@ More ready-to-use prompts, grouped by job, are in [docs/workflows.md](docs/workf
 - Exports, caption changes, copy drafts, collections and posting are free.
 - A render only starts when your balance covers the whole video, so you never end up with a half-paid render.
 - Up to 3 videos can be processing at once in a workspace. Your agent queues the rest and submits them as renders finish.
-- The server-side checks for these last two rules are still in progress ([status](docs/status.md)). The skills already follow both.
+- The server enforces both of these rules (live since 2026-10-06), and the skills follow them too.
 - Ask your agent "What is my FrameOS credit balance?" any time. Plans and prices live on https://frameos.studio/pricing; your agent won't quote them.
 
 ## Install
@@ -47,7 +47,7 @@ Pick your app. Each guide has the exact steps, how to check it worked, how to si
 
 | Where you use AI | Quickest path | Full guide |
 |---|---|---|
-| Claude Code | `claude mcp add --transport http -s user frameos https://frameos.studio/mcp` then `claude mcp login frameos` (tested). Or, with the skills: `claude plugin marketplace add theSatvik/frameos-plugins` then `claude plugin install frameos@frameos` | [docs/install/claude-code.md](docs/install/claude-code.md) |
+| Claude Code | `claude mcp add --transport http -s user frameos https://frameos.studio/mcp` then `claude mcp login frameos` (tested). Or, with the skills: `claude plugin marketplace add theSatvik/frameos-plugins` then `claude plugin install frameos@frameos` (signing in through the plugin's own connection is not tested yet) | [docs/install/claude-code.md](docs/install/claude-code.md) |
 | Claude.ai, Claude Desktop, Cowork | **Customize > Plugins > Add > Add marketplace**, enter `theSatvik/frameos-plugins`; or add a custom connector with `https://frameos.studio/mcp` | [docs/install/claude-ai.md](docs/install/claude-ai.md) |
 | Codex | `codex plugin marketplace add theSatvik/frameos-plugins` then `codex plugin add frameos@frameos` | [docs/install/codex.md](docs/install/codex.md) |
 | ChatGPT | Turn on developer mode, then add `https://frameos.studio/mcp` under ChatGPT Plugins | [docs/install/chatgpt.md](docs/install/chatgpt.md) |
