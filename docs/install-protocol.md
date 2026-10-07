@@ -122,7 +122,7 @@ Sign-in opens a browser and waits for the user, so ask the user to run it in the
 
 | Host | What the user runs |
 |---|---|
-| Claude Code | `/mcp`, select `plugin:frameos:frameos`, sign in; or `claude mcp login plugin:frameos:frameos` in a terminal |
+| Claude Code | `/mcp` in a Claude Code session, select `plugin:frameos:frameos`, sign in (`claude mcp login` does not see plugin connections) |
 | Codex | `codex mcp login frameos` |
 | Gemini CLI | Restart Gemini CLI, then `/mcp auth frameos` |
 | Copilot CLI | `/mcp auth frameos` in a session |

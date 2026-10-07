@@ -68,7 +68,7 @@ A 404 from a tool call is about an item. A 404 while the app connects is about t
 
 | App | Reconnect or re-authenticate | See the server's state |
 |---|---|---|
-| Claude Code | `/mcp`, select `plugin:frameos:frameos`, choose to authenticate; or run `claude mcp login plugin:frameos:frameos` | `claude mcp list` |
+| Claude Code | `/mcp`, select `plugin:frameos:frameos`, choose to authenticate | `claude mcp list` |
 | Claude.ai, Desktop, Cowork | Customize > Connectors > FrameOS > Connect | the connector's status in Customize > Connectors |
 | Codex | `codex mcp login frameos` | `codex mcp list` |
 | ChatGPT | open FrameOS under ChatGPT Plugins (https://chatgpt.com/plugins) and sign in again; if that fails, remove it and add it again | the app's details page |

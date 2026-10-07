@@ -17,7 +17,7 @@ The proof in every app is the same: ask "What is my FrameOS credit balance?" and
   Inside a session the same steps are `/plugin marketplace add theSatvik/frameos-plugins` and `/plugin install frameos@frameos`.
 - Server only, without the plugin: `claude mcp add --transport http frameos https://frameos.studio/mcp` (the server name is then `frameos`).
 - Is it connected: `claude mcp list` shows each server's state; "Failed to connect" means the service could not be reached. In a session, `/mcp` lists the servers.
-- Sign in or re-authenticate: `/mcp`, select `plugin:frameos:frameos`, choose to authenticate; or `claude mcp login plugin:frameos:frameos`. Over SSH or with no browser: `claude mcp login plugin:frameos:frameos --no-browser` prints a link to open elsewhere, then paste the redirect URL back when prompted.
+- Sign in or re-authenticate: `/mcp`, select `plugin:frameos:frameos`, choose to authenticate. `claude mcp login` does not see plugin connections, so sign in from `/mcp`.
 - Sign out: `claude mcp logout plugin:frameos:frameos`. For a 403 permission error, sign out this way and then sign in again.
 - Notes: non-interactive runs (`claude -p`, the SDK) cannot sign in, so sign in once interactively first. If FrameOS was also added as a claude.ai connector with the same URL, Claude Code uses its own server and hides the connector. Start a new session if the tools do not appear after installing.
 

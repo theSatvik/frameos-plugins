@@ -61,7 +61,7 @@ On 2.1.275 or later you can do both in one step:
 ### Sign in through the plugin
 
 - In a session: run `/mcp`, select `plugin:frameos:frameos`, and follow the steps in your browser.
-- From your shell: `claude mcp login plugin:frameos:frameos`. Over SSH, add `--no-browser`, as in route A.
+- `claude mcp login` from your shell does not work here: it only sees connections you added yourself, not a plugin's. Use `/mcp` inside a session.
 
 Not tested yet: this uses the same connector and sign-in server as route A, but no one has signed in through the plugin's connection so far. If it fails, uninstall the plugin (`claude plugin uninstall frameos@frameos`) and use route A for now.
 
