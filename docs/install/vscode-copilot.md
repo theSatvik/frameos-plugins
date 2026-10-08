@@ -8,7 +8,7 @@ FrameOS ships an [Agent Plugins](https://agent-plugins.org) package in [`agent-p
 | [B. VS Code plugin](#b-vs-code-plugin) | Skills and connector |
 | [C. Connector only](#c-connector-only) | The FrameOS tools |
 
-> **Coming soon: VS Code and Copilot can't sign in to FrameOS yet.** The FrameOS connector is live as of 2026-10-05, but its sign-in server only admits pre-registered apps for now, and so far only Claude Code is pre-registered ([status](../status.md)). None of these routes has been tested in VS Code or Copilot yet. Steps come from the VS Code and GitHub Copilot documentation.
+> **Tested in VS Code on 2026-10-09** with route C: the connector in the user `mcp.json`, sign-in, then a credit question in Copilot Chat ([status](../status.md)). Routes A and B (the plugins) are not tested yet. The Copilot CLI can't sign in to FrameOS yet: its client is not pre-registered.
 
 ## Requirements
 
@@ -98,7 +98,11 @@ If you edit `~/.copilot/mcp-config.json` yourself, note that the Copilot CLI req
 
 ## Sign in
 
-VS Code prompts you to sign in when it connects to FrameOS. In the Copilot CLI, run `/mcp auth frameos` in a session; it opens your browser.
+VS Code asks whether the frameos server may authenticate to `clerk.frameos.studio`. Click **Allow**, then sign in to FrameOS and approve access in your browser.
+
+If no prompt appears and the server's output ends with `Found 0 sessions for scopes: frameos:mcp` and `Connection state: Stopped`, start it by hand: in the Extensions view, under **MCP Servers - Installed**, open the gear menu next to frameos and choose **Start Server**. The prompt then appears.
+
+In the Copilot CLI, run `/mcp auth frameos` in a session; it opens your browser (once the Copilot CLI is enabled).
 
 ## Check it works
 
@@ -118,5 +122,6 @@ You should see your workspace name and a credit number.
 ## Known limitations
 
 - **Copilot cloud agent and Copilot code review do not support remote MCP servers that use OAuth**, so FrameOS works in VS Code, the Copilot CLI and the Copilot app, but not there.
-- VS Code tries Client ID Metadata Documents first, then Dynamic Client Registration. FrameOS's sign-in server accepts Client ID Metadata Documents only from pre-registered apps, VS Code's is not registered yet, and Dynamic Client Registration is off ([status](../status.md#prerequisites-before-every-host-can-connect)).
+- VS Code tries Client ID Metadata Documents first, then Dynamic Client Registration. FrameOS's sign-in server accepts Client ID Metadata Documents only from pre-registered apps; VS Code's and VS Code Insiders' are registered, the Copilot CLI's is not yet, and Dynamic Client Registration is off ([status](../status.md#prerequisites-before-every-host-can-connect)).
+- A chat that VS Code hands to the Copilot CLI agent does not see servers from VS Code's `mcp.json`, so it reports the FrameOS tools as unavailable. Use a regular Copilot Chat in agent mode.
 - Copilot can upload a local video file for you only where its agent can run commands.

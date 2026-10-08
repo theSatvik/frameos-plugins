@@ -4,7 +4,7 @@ Turn your long videos into short clips by asking the AI agent you already use. P
 
 This repo holds the official FrameOS plugin, skills and extension packages. They connect your agent to the hosted FrameOS connector (an MCP server at `https://frameos.studio/mcp`) and teach it how to use FrameOS well: when to check your credits, how long to wait for a render, which caption styles exist, and never to post anything without your go-ahead.
 
-> **Status, 2026-10-05: the hosted connector is live, and Claude Code can sign in.** `https://frameos.studio/mcp` is up. A real end-to-end test passed in Claude Code on 2026-10-05: sign-in, then `whoami` and `list_projects` returned a real account's data ([how to connect](docs/install/claude-code.md)). The other apps (claude.ai and Claude Desktop, ChatGPT, Codex, Cursor, Gemini CLI, VS Code and Copilot, Perplexity) are coming soon: they can't sign in yet. See [docs/status.md](docs/status.md) for what is left, and [try the whole workflow against the mock server](#try-it-without-credits-mock-server) without spending credits.
+> **Status, 2026-10-09: the hosted connector is live, and every listed app can sign in.** `https://frameos.studio/mcp` is up. Claude Code, Claude (web, Desktop, mobile), ChatGPT, Codex, Cursor and VS Code with GitHub Copilot are tested end to end against a real account; Gemini CLI and Perplexity are enabled and being tested. See [docs/status.md](docs/status.md) for what is left, and [try the whole workflow against the mock server](#try-it-without-credits-mock-server) without spending credits.
 
 ## What you can say to your agent
 
@@ -43,7 +43,7 @@ More ready-to-use prompts, grouped by job, are in [docs/workflows.md](docs/workf
 
 ## Install
 
-Pick your app. Each guide has the exact steps, how to check it worked, how to sign in again, and known limits. Claude Code, Claude (web, Desktop, mobile), ChatGPT, Codex and Cursor are tested end to end; Gemini CLI, VS Code and Perplexity can sign in since 2026-10-08 and are being tested ([status](docs/status.md)).
+Pick your app. Each guide has the exact steps, how to check it worked, how to sign in again, and known limits. Claude Code, Claude (web, Desktop, mobile), ChatGPT, Codex, Cursor and VS Code are tested end to end; Gemini CLI and Perplexity can sign in since 2026-10-08 and are being tested ([status](docs/status.md)).
 
 | Where you use AI | Quickest path | Full guide |
 |---|---|---|
