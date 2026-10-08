@@ -43,7 +43,7 @@ More ready-to-use prompts, grouped by job, are in [docs/workflows.md](docs/workf
 
 ## Install
 
-Pick your app. Each guide has the exact steps, how to check it worked, how to sign in again, and known limits. Claude Code, Claude (web, Desktop, mobile), ChatGPT and Codex are tested end to end; Cursor, Gemini CLI, VS Code and Perplexity can sign in since 2026-10-08 and are being tested ([status](docs/status.md)).
+Pick your app. Each guide has the exact steps, how to check it worked, how to sign in again, and known limits. Claude Code, Claude (web, Desktop, mobile), ChatGPT, Codex and Cursor are tested end to end; Gemini CLI, VS Code and Perplexity can sign in since 2026-10-08 and are being tested ([status](docs/status.md)).
 
 | Where you use AI | Quickest path | Full guide |
 |---|---|---|
