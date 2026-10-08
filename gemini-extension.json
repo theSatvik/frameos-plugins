@@ -10,8 +10,11 @@
       },
       "oauth": {
         "enabled": true,
+        "clientId": "0SMM8YEjdF4YxCa4",
+        "redirectUri": "http://localhost:7777/oauth/callback",
         "scopes": [
-          "frameos:mcp"
+          "frameos:mcp",
+          "offline_access"
         ]
       },
       "timeout": 600000

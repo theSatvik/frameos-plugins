@@ -43,7 +43,7 @@ More ready-to-use prompts, grouped by job, are in [docs/workflows.md](docs/workf
 
 ## Install
 
-Pick your app. Each guide has the exact steps, how to check it worked, how to sign in again, and known limits. **Today only Claude Code can sign in**; the other apps are coming soon ([status](docs/status.md)).
+Pick your app. Each guide has the exact steps, how to check it worked, how to sign in again, and known limits. Claude Code and Codex are tested end to end; every other app below can sign in since 2026-10-08 and is being tested now ([status](docs/status.md)).
 
 | Where you use AI | Quickest path | Full guide |
 |---|---|---|

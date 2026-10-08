@@ -19,7 +19,7 @@
 Open this link in your browser (paste it into the address bar if clicking it does nothing):
 
 ```text
-cursor://anysphere.cursor-deeplink/mcp/install?name=frameos&config=eyJ0eXBlIjoiaHR0cCIsInVybCI6Imh0dHBzOi8vZnJhbWVvcy5zdHVkaW8vbWNwIn0=
+cursor://anysphere.cursor-deeplink/mcp/install?name=frameos&config=eyJ0eXBlIjoiaHR0cCIsInVybCI6Imh0dHBzOi8vZnJhbWVvcy5zdHVkaW8vbWNwIiwiYXV0aCI6eyJDTElFTlRfSUQiOiJ4ZFhxb25rd1ltMlh6TTFaIiwic2NvcGVzIjpbImZyYW1lb3M6bWNwIiwib2ZmbGluZV9hY2Nlc3MiXX19
 ```
 
 The `config` part is base64 for `{"type":"http","url":"https://frameos.studio/mcp"}`. Cursor asks you to confirm the install, then follow the sign-in prompt.

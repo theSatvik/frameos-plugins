@@ -54,7 +54,7 @@ The proof in every app is the same: ask "What is my FrameOS credit balance?" and
 ## Cursor
 
 - Install: from the Cursor Marketplace (Customize, find FrameOS, Install) once it is listed. Or one-click:
-  `cursor://anysphere.cursor-deeplink/mcp/install?name=frameos&config=eyJ0eXBlIjoiaHR0cCIsInVybCI6Imh0dHBzOi8vZnJhbWVvcy5zdHVkaW8vbWNwIn0=`
+  `cursor://anysphere.cursor-deeplink/mcp/install?name=frameos&config=eyJ0eXBlIjoiaHR0cCIsInVybCI6Imh0dHBzOi8vZnJhbWVvcy5zdHVkaW8vbWNwIiwiYXV0aCI6eyJDTElFTlRfSUQiOiJ4ZFhxb25rd1ltMlh6TTFaIiwic2NvcGVzIjpbImZyYW1lb3M6bWNwIiwib2ZmbGluZV9hY2Nlc3MiXX19`
   Or add to `~/.cursor/mcp.json` (all projects) or `.cursor/mcp.json` (one project):
   `{"mcpServers": {"frameos": {"url": "https://frameos.studio/mcp"}}}`
   Local plugin: clone the repo into `~/.cursor/plugins/local/frameos/` and reload Cursor.

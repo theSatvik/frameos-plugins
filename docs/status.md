@@ -63,13 +63,13 @@ Which clients ask for `frameos:mcp` on their own (from client source and docs; c
 | Host | Package loads | Sign-in | Live account end to end |
 |---|---|---|---|
 | Claude Code | Yes, locally with 2.1.282: `claude plugin validate --strict` passes for the marketplace and the plugin; marketplace add and install in an isolated config load all 8 skills and the connector | Yes, on 2026-10-05, with the connector added directly (`claude mcp add --transport http -s user frameos https://frameos.studio/mcp`, then `claude mcp login frameos`). Not yet tested through the plugin's own connection, `plugin:frameos:frameos` | Yes, on 2026-10-05, for `whoami` and `list_projects`: both returned the account's real data |
-| Codex CLI 0.152.0 | Yes, locally: marketplace add and plugin add in an isolated `CODEX_HOME`; all 8 skills reach the model's prompt | Coming soon (not enabled yet) | Not yet |
-| Claude.ai, Desktop, Cowork | Not yet verified. Whether **Add marketplace** accepts a repo whose root is the plugin is unconfirmed | Coming soon (not enabled yet) | Not yet |
-| ChatGPT | Not yet verified | Coming soon (not enabled yet) | Not yet |
-| Cursor | Not yet verified | Coming soon (not enabled yet) | Not yet |
-| Gemini CLI | Not yet verified (not installed on the test machine) | Coming soon (not enabled yet) | Not yet |
-| VS Code and GitHub Copilot | Not yet verified | Coming soon (not enabled yet) | Not yet |
-| Perplexity | Not yet verified | Coming soon (not enabled yet) | Not yet |
+| Codex CLI 0.152.0 | Yes, locally: marketplace add and plugin add in an isolated `CODEX_HOME`; all 8 skills reach the model's prompt | Yes, on 2026-10-08 (`codex mcp add` + `codex mcp login`; CIMD client pre-registered) | Yes: `whoami` returned the account on 2026-10-08 |
+| Claude.ai, Desktop, Cowork | Not yet verified. Whether **Add marketplace** accepts a repo whose root is the plugin is unconfirmed | Enabled 2026-10-08 (CIMD client pre-registered); not yet tested | Not yet |
+| ChatGPT | Not yet verified | Enabled 2026-10-08 (CIMD client pre-registered); not yet tested. Its client document asks for `private_key_jwt`, which the sign-in server does not list, so the token step may fail | Not yet |
+| Cursor | Not yet verified | Enabled 2026-10-08 (public client `xdXqonkwYm2XzM1Z` in the plugin manifest and install link); not yet tested | Not yet |
+| Gemini CLI | Not yet verified (not installed on the test machine) | Enabled 2026-10-08 (public client `0SMM8YEjdF4YxCa4`, callback `http://localhost:7777/oauth/callback`, in `gemini-extension.json`); not yet tested | Not yet |
+| VS Code and GitHub Copilot | Not yet verified | Enabled 2026-10-08 for VS Code and VS Code Insiders (CIMD clients pre-registered); Copilot CLI not yet; not yet tested | Not yet |
+| Perplexity | Not yet verified | Enabled 2026-10-08 (public client `2zmQEDyKLc8bw01o`; enter it under Advanced > Client ID); not yet tested | Not yet |
 | Devin and Windsurf | Not yet verified | Coming soon (not enabled yet) | Not yet |
 | `npx skills` | Not yet verified | n/a | n/a |
 
