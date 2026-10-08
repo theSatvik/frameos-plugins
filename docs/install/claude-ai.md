@@ -37,7 +37,7 @@ Works on Free, Pro, Max, Team and Enterprise. On the Free plan you can add one c
 1. Go to **Customize > Connectors** and click **Add custom connector**.
 2. **MCP server URL:** `https://frameos.studio/mcp`
 3. **Authentication:** **Sign in now** (or **Sign in when needed**).
-4. **OAuth client:** **Use Claude's published identity**. If sign-in later fails with a registration error, remove the connector and add it again with **Register automatically**.
+4. **OAuth client:** **Use Claude's published identity** (Claude detects it). Don't pick **Register automatically**: FrameOS doesn't offer dynamic registration, so that option always fails.
 5. Leave **Request headers** and **Advanced > Transport** alone. Click **Add**, then **Connect**.
 
 **Team or Enterprise:** an Owner adds the connector for everyone under **Organization settings > Connectors** (https://claude.ai/admin-settings/connectors): select **Add**, then **Custom**, choose **Web** if asked, enter `https://frameos.studio/mcp`, and click **Add**. Each member then goes to **Customize > Connectors**, finds FrameOS with the **Custom** label, and clicks **Connect**.

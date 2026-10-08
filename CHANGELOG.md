@@ -30,6 +30,6 @@ First version. The hosted FrameOS connector (`https://frameos.studio/mcp`) is li
 
 ### Known issues
 
-- Every listed app can sign in since 2026-10-08: Claude Code, Claude (web, Desktop, mobile), ChatGPT, Codex and VS Code through their published client documents, and Cursor, Gemini CLI and Perplexity through public client IDs shipped in their configs. Only pre-registered apps are admitted and Dynamic Client Registration stays off. Claude Code and Codex are tested end to end; the rest are not yet.
+- Every listed app can sign in since 2026-10-08: Claude Code, Claude (web, Desktop, mobile), ChatGPT, Codex and VS Code through their published client documents, and Cursor, Gemini CLI and Perplexity through public client IDs shipped in their configs. Only pre-registered apps are admitted and Dynamic Client Registration stays off. Claude Code, Claude, ChatGPT and Codex are tested end to end; Cursor, Gemini CLI, VS Code and Perplexity are not yet.
 - Signing in through the Claude Code plugin's own connection (`plugin:frameos:frameos`) has not been tested yet; connecting the connector directly has.
 - See [docs/status.md](docs/status.md) for the full list of open items.
