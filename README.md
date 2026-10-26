@@ -1,10 +1,10 @@
 # FrameOS for AI agents
 
-Turn your long videos into short clips by asking the AI agent you already use. Paste a podcast, stream, interview or webinar link into Claude Code today (Claude, ChatGPT, Codex, Cursor, Gemini CLI, GitHub Copilot and Perplexity are coming soon), and FrameOS finds the strongest moments, reframes them for your format, adds captions and hands you back a ranked list of clips. You stay in charge of what gets exported, captioned, thumbnailed and posted.
+Turn your long videos into short clips by asking the AI agent you already use. Paste a podcast, stream, interview or webinar link into Claude, ChatGPT, Claude Code, Codex, Cursor, GitHub Copilot, Gemini CLI or Perplexity, and FrameOS finds the strongest moments, reframes them for your format, adds captions and hands you back a ranked list of clips. You stay in charge of what gets exported, captioned, thumbnailed and posted.
 
-This repo holds the official FrameOS plugin, skills and extension packages. They connect your agent to the hosted FrameOS connector (an MCP server at `https://frameos.studio/mcp`) and teach it how to use FrameOS well: when to check your credits, how long to wait for a render, which caption styles exist, and never to post anything without your go-ahead.
+This repo holds the FrameOS plugin, skills and extension packages. They connect your agent to the hosted FrameOS connector (an MCP server at `https://frameos.studio/mcp`) and teach it how to use FrameOS well: when to check your credits, how long to wait for a render, which caption styles exist, and never to post anything without your go-ahead.
 
-> **Status, 2026-10-09: the hosted connector is live, and every listed app can sign in.** `https://frameos.studio/mcp` is up. Claude Code, Claude (web, Desktop, mobile), ChatGPT, Codex, Cursor and VS Code with GitHub Copilot are tested end to end against a real account; Gemini CLI and Perplexity are enabled and being tested. See [docs/status.md](docs/status.md) for what is left, and [try the whole workflow against the mock server](#try-it-without-credits-mock-server) without spending credits.
+> **Status, 2026-10-26: the hosted connector is live, and every listed app except Devin can sign in.** `https://frameos.studio/mcp` is up. Claude Code, Claude (web, Desktop, mobile), ChatGPT, Codex, Cursor and VS Code with GitHub Copilot are tested end to end against a real account; Gemini CLI, Perplexity and the Copilot CLI can sign in but are not tested end to end yet (beta). Devin (including Windsurf) is coming soon: it can't sign in yet. See [docs/status.md](docs/status.md) for what is left, and [try the whole workflow against the mock server](#try-it-without-credits-mock-server) without spending credits.
 
 ## What you can say to your agent
 
@@ -43,19 +43,19 @@ More ready-to-use prompts, grouped by job, are in [docs/workflows.md](docs/workf
 
 ## Install
 
-Pick your app. Each guide has the exact steps, how to check it worked, how to sign in again, and known limits. Claude Code, Claude (web, Desktop, mobile), ChatGPT, Codex, Cursor and VS Code are tested end to end; Gemini CLI and Perplexity can sign in since 2026-10-08 and are being tested ([status](docs/status.md)).
+Pick your app. Each guide has the exact steps, how to check it worked, how to sign in again, and known limits. Claude Code, Claude (web, Desktop, mobile), ChatGPT, Codex, Cursor and VS Code are tested end to end; Gemini CLI and Perplexity (since 2026-10-08) and the Copilot CLI (since 2026-10-23) can sign in but are not tested end to end yet; Devin is coming soon ([status](docs/status.md)).
 
 | Where you use AI | Quickest path | Full guide |
 |---|---|---|
 | Claude Code | `claude mcp add --transport http -s user frameos https://frameos.studio/mcp` then `claude mcp login frameos` (tested). Or, with the skills: `claude plugin marketplace add theSatvik/frameos-plugins` then `claude plugin install frameos@frameos` (signing in through the plugin's own connection is not tested yet) | [docs/install/claude-code.md](docs/install/claude-code.md) |
-| Claude.ai, Claude Desktop, Cowork | **Customize > Plugins > Add > Add marketplace**, enter `theSatvik/frameos-plugins`; or add a custom connector with `https://frameos.studio/mcp` | [docs/install/claude-ai.md](docs/install/claude-ai.md) |
+| Claude.ai, Claude Desktop, Cowork | Add a custom connector with `https://frameos.studio/mcp` (tested). Or, with the skills: **Customize > Plugins > Add > Add marketplace**, enter `theSatvik/frameos-plugins` (not tested yet) | [docs/install/claude-ai.md](docs/install/claude-ai.md) |
 | Codex | `codex plugin marketplace add theSatvik/frameos-plugins` then `codex plugin add frameos@frameos` | [docs/install/codex.md](docs/install/codex.md) |
 | ChatGPT | Turn on developer mode, then add `https://frameos.studio/mcp` under ChatGPT Plugins | [docs/install/chatgpt.md](docs/install/chatgpt.md) |
-| Cursor | One-click install link, or the plugin as a local plugin | [docs/install/cursor.md](docs/install/cursor.md) |
+| Cursor | One-click install link (tested), or the plugin as a local plugin | [docs/install/cursor.md](docs/install/cursor.md) |
 | Gemini CLI | `gemini extensions install https://github.com/theSatvik/frameos-plugins` | [docs/install/gemini-cli.md](docs/install/gemini-cli.md) |
-| VS Code and GitHub Copilot | `copilot plugin install theSatvik/frameos-plugins:agent-plugin`, or **Chat: Install Plugin From Source** in VS Code | [docs/install/vscode-copilot.md](docs/install/vscode-copilot.md) |
+| VS Code and GitHub Copilot | VS Code: add `https://frameos.studio/mcp` to your `mcp.json` (tested), or **Chat: Install Plugin From Source**. Copilot CLI (1.0.83 or newer): `copilot mcp add --transport http frameos https://frameos.studio/mcp`, then `/mcp auth frameos` (not tested end to end yet) | [docs/install/vscode-copilot.md](docs/install/vscode-copilot.md) |
 | Perplexity | **Account settings > Connectors > + Custom connector > Remote** with `https://frameos.studio/mcp` | [docs/install/perplexity.md](docs/install/perplexity.md) |
-| Devin and Windsurf | `devin plugins install theSatvik/frameos-plugins` | [docs/install/devin-windsurf.md](docs/install/devin-windsurf.md) |
+| Devin and Windsurf (now Devin Desktop) | Coming soon: Devin can't sign in to FrameOS yet. Email support@frameos.studio to hear when it can | [docs/install/devin-windsurf.md](docs/install/devin-windsurf.md) |
 | Any other agent | `npx skills add theSatvik/frameos-plugins`, plus the connector URL `https://frameos.studio/mcp` | [docs/install/other-agents.md](docs/install/other-agents.md) |
 
 **Check it worked.** In a new conversation, ask: "What is my FrameOS credit balance?" You should get your workspace name and a credit number. A "connected" badge on its own isn't proof; only a real answer is.
@@ -92,6 +92,15 @@ Install FrameOS by following https://github.com/theSatvik/frameos-plugins/blob/m
 
 Clips made on the free plan carry a FrameOS watermark.
 
+## What this plugin sends
+
+- **Two addresses, nothing else.** Once installed, the plugin points your app at the FrameOS connector, `https://frameos.studio/mcp`, and at FrameOS sign-in, `https://clerk.frameos.studio`, which you see once when you connect your account. Upload and download links that the connector hands back (for a file you ask your agent to upload, or a finished MP4) point at FrameOS's own file storage and expire.
+- **No code of its own.** The plugin is written instructions (skills and Gemini CLI commands) and connection settings, with no hooks and nothing that runs when you install or use it. Your AI app makes every request. The repo's `dev/`, `scripts/`, `tests/` and `evals/` folders are maintainer tooling (a local mock server that runs only when you start it and calls nothing outside your machine, plus checks and tests); the plugin never runs them. In apps that can run commands, the skills may have your agent check and upload a video file you picked, wait between render checks, save an MP4 you asked for, or run your app's install steps when you ask it to set FrameOS up.
+- **No tracking.** No analytics or telemetry. The only extra detail the plugin adds is its version number, sent as an `X-FrameOS-Plugin-Version` header in apps that support it.
+- **Nothing goes public without you.** The skills ask you to confirm every post, every time, before anything is published.
+
+What FrameOS does with your videos and account is in the [privacy policy](https://frameos.studio/privacy) and the [terms](https://frameos.studio/terms). Questions: support@frameos.studio.
+
 ## Try it without credits (mock server)
 
 The repo ships a local mock FrameOS server with the same 27 tools and inputs as the real one, and errors in the same format. It needs no account, no sign-in and no credits, so you can watch the whole flow - submit, poll, clips, captions, export, thumbnails, copy and a fake post - without touching a real account.
@@ -114,18 +123,20 @@ The repo root is the plugin. One set of skills serves every host; each host read
 |---|---|---|
 | [`skills/`](skills/) | The eight skills: [frameos-setup](skills/frameos-setup/SKILL.md), [frameos-clip](skills/frameos-clip/SKILL.md), [frameos-captions](skills/frameos-captions/SKILL.md), [frameos-find-moments](skills/frameos-find-moments/SKILL.md), [frameos-thumbnails](skills/frameos-thumbnails/SKILL.md), [frameos-publish](skills/frameos-publish/SKILL.md), [frameos-library](skills/frameos-library/SKILL.md), [frameos-repurpose](skills/frameos-repurpose/SKILL.md). Each has `references/` and `agents/openai.yaml`. | Every host; `npx skills`; skill ZIP uploads |
 | [`.claude-plugin/`](.claude-plugin/) | Claude plugin manifest and marketplace | Claude Code; claude.ai, Claude Desktop and Cowork; Devin falls back to it |
-| [`.mcp.json`](.mcp.json) | The FrameOS connection, written so both Claude and Codex read it | Claude Code, Codex |
-| [`.codex-plugin/`](.codex-plugin/), [`.agents/plugins/marketplace.json`](.agents/plugins/marketplace.json) | Codex plugin manifest and marketplace | Codex CLI and app; ChatGPT plugin directory submission |
+| [`.mcp.json`](.mcp.json) | The FrameOS connection in Claude Code's format | Claude Code; Devin and VS Code when they install the Claude-format plugin |
+| [`.codex-plugin/`](.codex-plugin/), [`.agents/plugins/marketplace.json`](.agents/plugins/marketplace.json) | Codex plugin manifest, its own connection file (`.codex-plugin/mcp.json`) and marketplace | Codex CLI and app; ChatGPT plugin directory submission |
 | [`.cursor-plugin/plugin.json`](.cursor-plugin/plugin.json) | Cursor plugin, connection included | Cursor |
 | [`gemini-extension.json`](gemini-extension.json), [`GEMINI.md`](GEMINI.md), [`commands/frameos/`](commands/frameos/) | Gemini CLI extension, its always-on context and the `/frameos:*` commands | Gemini CLI |
 | [`agent-plugin/`](agent-plugin/) | Agent Plugins 1.0 package (its `skills/` is a synced copy) | VS Code and GitHub Copilot (IDE, CLI, app), Devin, Cursor |
 | [`.github/plugin/marketplace.json`](.github/plugin/marketplace.json) | Copilot marketplace pointing at `agent-plugin/` | Copilot CLI, VS Code |
 | [`assets/icon.png`](assets/icon.png) | 1024 px icon | Codex, Cursor, directories |
+| [`server.json`](server.json) | The connector's listing for the Official MCP Registry (not part of the plugin) | MCP Registry and the directories that copy it |
+| [`docs/submission/openai-package.json`](docs/submission/openai-package.json) | Listing text and review details merged into the OpenAI upload ZIP | ChatGPT and Codex Plugin Directory submission |
 | [`dev/`](dev/README.md) | Mock FrameOS server for demos and tests | You, maintainers |
 | [`docs/`](docs/) | Install guides, prompt library, status, submission checklists | Everyone |
 | [`scripts/`](scripts/), [`tests/`](tests/), [`evals/`](evals/) | Validator, sync, version bump, ZIP builder, tests, Claude plugin evals | Maintainers |
 
-Skill ZIPs for claude.ai and Perplexity uploads, and the plugin ZIP for **Upload plugin**, are built with `python3 scripts/build_dist.py` into `dist/`.
+Skill ZIPs for claude.ai and Perplexity uploads, the plugin ZIP for **Upload plugin**, and the OpenAI Plugin Directory ZIP are built with `python3 scripts/build_dist.py` into `dist/`.
 
 ## Links
 

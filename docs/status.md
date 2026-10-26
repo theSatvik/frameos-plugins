@@ -1,10 +1,10 @@
 # Status
 
-Last checked: **2026-10-09**. Package version: see [`VERSION`](../VERSION).
+Last checked: **2026-10-26**. Package version: see [`VERSION`](../VERSION).
 
 ## In one paragraph
 
-The hosted FrameOS connector, `https://frameos.studio/mcp`, is **live**. Every listed app can sign in, and six are tested end to end against a real account: Claude Code (2026-10-05), Codex, Claude (web, Desktop and mobile), ChatGPT and Cursor (2026-10-08), and VS Code with GitHub Copilot (2026-10-09). Gemini CLI and Perplexity are enabled but not tested yet; the Copilot CLI and Devin and Windsurf are not enabled yet. FrameOS's sign-in server only admits pre-registered apps. The packages in this repo load locally in Claude Code and Codex. Signing in through the Claude Code plugin's own connection has not been tested yet. Every install guide marks what is unverified, and the [mock server](../dev/README.md) still lets you try every workflow without spending credits.
+The hosted FrameOS connector, `https://frameos.studio/mcp`, is **live**. Every listed app except Devin can sign in, and six are tested end to end against a real account: Claude Code (2026-10-05), Codex, Claude (web, Desktop and mobile), ChatGPT and Cursor (2026-10-08), and VS Code with GitHub Copilot (2026-10-09). Gemini CLI, Perplexity and the Copilot CLI can sign in but are not tested end to end yet (beta). Devin (CLI, Desktop and web app, including Windsurf, now Devin Desktop) is **coming soon**: it has no client registered with FrameOS yet, so it can't sign in. FrameOS's sign-in server only admits pre-registered apps, so Windsurf's old Cascade agent, which only supports Dynamic Client Registration, can't sign in either. The packages in this repo load locally in Claude Code and Codex. Signing in through the Claude Code plugin's own connection has not been tested yet. Every install guide marks what is unverified, and the [mock server](../dev/README.md) still lets you try every workflow without spending credits.
 
 ## The hosted connector
 
@@ -19,7 +19,7 @@ Probed with `curl` on 2026-10-05:
 The sign-in server (Clerk OAuth) is set up for agent sign-in, with one limit:
 
 - Its `scopes_supported` lists `frameos:mcp`, the scope the connector requires on every token.
-- It advertises `client_id_metadata_document_supported: true`, so Client ID Metadata Documents (CIMD) are on. Admission is set to **"Pre-registered clients only"**: an app can sign in only after its CIMD client has been registered with FrameOS. So far only Claude Code is.
+- It advertises `client_id_metadata_document_supported: true`, so Client ID Metadata Documents (CIMD) are on. Admission is set to **"Pre-registered clients only"**: an app can sign in only after its CIMD client has been registered with FrameOS, or with a public client ID registered for it.
 - It has no `registration_endpoint`, so Dynamic Client Registration (DCR) is off.
 - It advertises S256 PKCE, `none` among its token endpoint auth methods, and `authorization_response_iss_parameter_supported: true`, which several clients need.
 
@@ -38,25 +38,26 @@ The sign-in server (Clerk OAuth) is set up for agent sign-in, with one limit:
 These are owned by the MCP connector work, not by this repo:
 
 1. **Clerk scope.** Done: `frameos:mcp` is created and advertised. It is also in the default scopes for dynamic clients, which the clients marked below need.
-2. **Clerk client onboarding.** Done for every listed app except the Copilot CLI and Devin and Windsurf. Only pre-registered clients are admitted. Claude Code, Claude, ChatGPT, Codex, VS Code and VS Code Insiders sign in through their pre-registered CIMD clients; Cursor, Gemini CLI and Perplexity through public client IDs that ship in their configs or install steps. DCR stays off.
+2. **Clerk client onboarding.** Done for every listed app except Devin. Only pre-registered clients are admitted. Claude Code, Claude, ChatGPT, Codex, VS Code, VS Code Insiders and the Copilot CLI sign in through their pre-registered CIMD clients (the Copilot CLI's since 2026-10-23); Cursor, Gemini CLI and Perplexity through public client IDs that ship in their configs or install steps. Devin (CLI, Desktop and web app) has neither a public client nor a CIMD client registered, so it can't sign in yet. On 2026-10-23 the CIMD clients of Grok, Cursor (web, cloud agents and Grok Bot), goose, Zed, Smithery, OpenCode and Kilo were pre-registered too; none of them is tested end to end yet. DCR stays off, so Windsurf's old Cascade agent can't sign in; it was removed from Devin Desktop on 2026-09-08.
 3. **Live endpoint and well-known routes.** Done.
 4. **Launch guardrails** (owner decision, 2026-10-02). **Done (deployed 2026-10-06).** The connector is open to every FrameOS plan, with credits as the only gate. Two server-side checks:
    - A render starts only when the balance covers the video, less the credits held by renders already in progress. The check runs at submit when the length is known (a refused project is marked failed with the reason); otherwise, and always for uploads, the worker checks right after download and fails with `(insufficient_credits)`, charging nothing.
    - At most 3 renders process at once per workspace. Over the limit, the server returns 429. Submits in one workspace are taken one at a time; one that waits too long gets a 429 asking to submit again in a few seconds.
 
    The skills, `dev/mock_server.py` and the tool snapshot in `tests/fixtures/` already follow that update and its exact messages; switch the guardrails off in the mock with `FRAMEOS_MOCK_GUARDRAILS=0`.
-5. **End-to-end check.** Done for Claude Code (2026-10-05), Codex, Claude, ChatGPT and Cursor (2026-10-08) and VS Code (2026-10-09). Still needed for Gemini CLI and Perplexity.
+5. **End-to-end check.** Done for Claude Code (2026-10-05), Codex, Claude, ChatGPT and Cursor (2026-10-08) and VS Code (2026-10-09). Not yet run for Gemini CLI, Perplexity or the Copilot CLI; not possible for Devin until its client is registered. Since 2026-10-09 an app is listed as live once its client is registered, without waiting for its own end-to-end test (owner decision).
 
 Which clients ask for `frameos:mcp` on their own (from client source and docs; confirmed against the live server only for Claude Code, which got the scope with the connector added directly and no scope configured):
 
 | Client | Where it takes scopes from | What this repo does about it |
 |---|---|---|
 | Claude Code, Claude apps | The connector's own metadata | Nothing needed; `.mcp.json` also sets the scope |
-| Codex | Its config, else the sign-in server's metadata | `.mcp.json` sets `scopes` |
+| Codex | Its config, else the sign-in server's metadata | `.codex-plugin/mcp.json` sets `scopes` |
 | Gemini CLI | Its config, else the sign-in server's metadata | `gemini-extension.json` sets `oauth.scopes` |
 | Cursor | Only with a pre-registered client ID, else the sign-in server's metadata | Nothing possible without a client ID; needs the Clerk default scope |
 | ChatGPT | The OpenID scopes the sign-in server advertises | Needs the Clerk default scope |
-| Copilot CLI | Only with a pre-registered client ID, else discovered metadata | Needs the Clerk default scope |
+| Copilot CLI | The connector's 401 challenge; its own `oauthScopes` only when the challenge names no scope | Nothing needed; its pre-registered CIMD client allows `frameos:mcp` |
+| Devin | Its `--scopes` option, else the connector's 401 challenge, plus `offline_access` | Nothing yet: Devin has no registered client, so it can't sign in |
 
 ## What has been verified
 
@@ -68,9 +69,9 @@ Which clients ask for `frameos:mcp` on their own (from client source and docs; c
 | ChatGPT | Not yet verified | Yes, on 2026-10-08 (Developer mode, Plugins > + > Add custom MCP server, OAuth via CIMD; works on a free ChatGPT plan) | Yes: `whoami` returned the account in a chat on 2026-10-08 |
 | Cursor | Not yet verified | Yes, on 2026-10-08 (Add to Cursor link with public client `xdXqonkwYm2XzM1Z`, then Connect) | Yes: a FrameOS question in Cursor's Agent chat on 2026-10-08 |
 | Gemini CLI | Not yet verified (not installed on the test machine) | Enabled 2026-10-08 (public client `0SMM8YEjdF4YxCa4`, callback `http://localhost:7777/oauth/callback`, in `gemini-extension.json`); not yet tested | Not yet |
-| VS Code and GitHub Copilot | Not yet verified | Yes, on 2026-10-09 in VS Code 1.141 (connector added to the user `mcp.json`, then Start Server and the sign-in prompt; CIMD client pre-registered, also for VS Code Insiders). Copilot CLI not enabled yet | Yes: a credit question in Copilot Chat returned the account's balance and usage on 2026-10-09 |
+| VS Code and GitHub Copilot | Not yet verified | Yes, on 2026-10-09 in VS Code 1.141 (connector added to the user `mcp.json`, then Start Server and the sign-in prompt; CIMD client pre-registered, also for VS Code Insiders). Copilot CLI: its CIMD client `https://github.com/copilot/cli/client-metadata.json` was pre-registered on 2026-10-23 (scopes `openid profile email offline_access frameos:mcp`), so its config needs only the server URL (Copilot CLI 1.0.83 or newer). A sign-in probe with that client reaches the FrameOS sign-in page; not yet tested end to end | Yes: a credit question in Copilot Chat returned the account's balance and usage on 2026-10-09 |
 | Perplexity | Not yet verified | Enabled 2026-10-08 (public client `2zmQEDyKLc8bw01o`; enter it under Advanced > Client ID); not yet tested | Not yet |
-| Devin and Windsurf | Not yet verified | Coming soon (not enabled yet) | Not yet |
+| Devin and Windsurf | Not yet verified | Coming soon. No client is registered for the Devin CLI, Devin Desktop or the Devin web app (no public client, no CIMD client), so none of them can sign in yet; the install guide says so. Windsurf's old Cascade agent can't sign in (DCR only) | Not yet |
 | `npx skills` | Not yet verified | n/a | n/a |
 
 ## Open issues in the MCP connector
@@ -79,7 +80,7 @@ These were found while building the packages and are fixed in the FrameOS MCP co
 
 **Sign-in and directory readiness**
 
-- Clerk: pre-register the Copilot CLI and Devin and Windsurf. Loopback redirects work for Claude Code, Codex and VS Code. DCR stays off.
+- Clerk: done for every listed app except Devin, which still needs a registered client (CLI and Desktop, and the web app's callback `https://api.devin.ai/mcp/oauth/callback`). The Copilot CLI signs in through its pre-registered CIMD client. Loopback redirects work for Claude Code, Codex and VS Code. DCR stays off.
 - Frontend: later, `/.well-known/openai-apps-challenge` (OpenAI portal domain check) and possibly `/.well-known/mcp-registry-auth` (MCP Registry) and `/.well-known/oauth-authorization-server` (Perplexity's documented discovery path).
 
 **Behaviour an agent can see**
@@ -120,4 +121,4 @@ curl -s https://frameos.studio/.well-known/oauth-protected-resource/mcp | python
 curl -s https://clerk.frameos.studio/.well-known/oauth-authorization-server | python3 -m json.tool | grep -E 'issuer|scopes_supported|registration_endpoint|client_id_metadata' -A8
 ```
 
-Expect a 401 whose `WWW-Authenticate` carries `resource_metadata` and `scope="frameos:mcp"`, then a 200 from the well-known route. These checks can't show which apps are pre-registered. When an app's client is registered (or admission is opened, or a `registration_endpoint` appears for DCR-only apps such as Gemini CLI), run that app's install guide "Check it works" step and update the table above.
+Expect a 401 whose `WWW-Authenticate` carries `resource_metadata` and `scope="frameos:mcp"`, then a 200 from the well-known route. These checks can't show which apps are pre-registered. When an app's client is registered (or admission is opened, or a `registration_endpoint` appears for DCR-only apps such as Windsurf's old Cascade agent), run that app's install guide "Check it works" step and update the table above.

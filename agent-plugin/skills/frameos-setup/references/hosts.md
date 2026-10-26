@@ -44,6 +44,7 @@ The proof in every app is the same: ask "What is my FrameOS credit balance?" and
 
 ## ChatGPT (web)
 
+- Install: once FrameOS is listed in the ChatGPT Plugin Directory, open https://chatgpt.com/plugins, search for FrameOS, add it and sign in. Until then, set it up in developer mode as below.
 - Requirements: developer mode, available on Pro, Plus, Business, Enterprise and Education accounts on the web; a workspace admin can block it.
 - Set up: Settings > Security and login > turn on Developer mode. Open ChatGPT Plugins at https://chatgpt.com/plugins, click "+", name it FrameOS, enter the MCP server URL `https://frameos.studio/mcp`, choose OAuth, and save. It appears under Drafts.
 - Use it: in a chat, open the "+" menu > Developer mode, and select FrameOS.
@@ -65,7 +66,7 @@ The proof in every app is the same: ask "What is my FrameOS credit balance?" and
 
 - Install the extension (run in the shell, not inside an interactive session, then restart Gemini CLI):
   `gemini extensions install https://github.com/theSatvik/frameos-plugins`
-- Server only: `gemini mcp add --transport http frameos https://frameos.studio/mcp`.
+- Server only: `gemini mcp add --transport http frameos https://frameos.studio/mcp`, then give the `frameos` entry in `.gemini/settings.json` the extension's sign-in block: `"oauth": {"enabled": true, "clientId": "0SMM8YEjdF4YxCa4", "redirectUri": "http://localhost:7777/oauth/callback", "scopes": ["frameos:mcp", "offline_access"]}`. Without that client ID, sign-in fails.
 - Is it connected: `/mcp list`; FrameOS should show as Connected.
 - Sign in or re-authenticate: `/mcp auth frameos` (plain `/mcp auth` lists servers that need sign-in). Tokens are stored in `~/.gemini/mcp-oauth-tokens.json`.
 - Notes: sign-in needs a local browser; it does not work over SSH without browser forwarding. "Missing issuer parameter" or "Issuer mismatch" during sign-in is a FrameOS-side problem: report it to support@frameos.studio.
@@ -75,24 +76,23 @@ The proof in every app is the same: ask "What is my FrameOS credit balance?" and
 - Copilot CLI plugin: `copilot plugin install theSatvik/frameos-plugins:agent-plugin`.
 - VS Code plugin: Command Palette > "Chat: Install Plugin From Source", enter `https://github.com/theSatvik/frameos-plugins` (agent plugins must be enabled with the `chat.plugins.enabled` setting).
 - Server only, VS Code: `code --add-mcp '{"name":"frameos","type":"http","url":"https://frameos.studio/mcp"}'`, or add `{"servers": {"frameos": {"type": "http", "url": "https://frameos.studio/mcp"}}}` to `.vscode/mcp.json`.
-- Server only, Copilot CLI: `copilot mcp add --transport http frameos https://frameos.studio/mcp`.
+- Server, Copilot CLI (1.0.83 or newer): `copilot mcp add --transport http frameos https://frameos.studio/mcp`, or add `{"mcpServers": {"frameos": {"type": "http", "url": "https://frameos.studio/mcp"}}}` to `~/.copilot/mcp-config.json`, keeping any servers already there. The Copilot CLI signs in with its own published client document, which FrameOS has registered, so there is no client ID or port to set. A `tools` list is optional. Signing in through the plugin's own connection is not tested; if it fails, add this server and sign in through it.
 - Is it connected: VS Code: Command Palette > MCP: List Servers > frameos (Show Output for logs). Copilot CLI: `/mcp list` or `copilot mcp list`.
-- Re-authenticate: VS Code: MCP: List Servers > frameos > Restart, then complete the browser sign-in. Copilot CLI: `/mcp auth frameos`.
-- Notes: in Copilot Business and Enterprise, the "MCP servers in Copilot" policy is off until an admin enables it. Copilot's cloud agent and code review cannot use servers that sign in with OAuth, so FrameOS works only in the editor, CLI and app.
+- Re-authenticate: VS Code: MCP: List Servers > frameos > Restart, then complete the browser sign-in. Copilot CLI: `/mcp auth frameos`. A registration error usually means the Copilot CLI is older than 1.0.83; update it with `copilot update`.
+- Notes: in Copilot Business and Enterprise, the "MCP servers in Copilot" policy is off until an admin enables it. Copilot's cloud agent and code review cannot use servers that sign in with OAuth, so FrameOS works only in VS Code and the Copilot CLI (the Copilot app is not verified).
 
 ## Perplexity
 
 - Requirements: Pro, Max or Enterprise. On Enterprise an admin must allow members to add custom connectors.
-- Set up: Account settings > Connectors > "+ Custom connector" > Remote. Name `FrameOS`, MCP Server URL `https://frameos.studio/mcp`, Authentication OAuth, Transport Streamable HTTP. Tick the acknowledgement, click Add, then click the FrameOS card to sign in.
+- Set up: Account settings > Connectors > "+ Custom connector" > Remote. Name `FrameOS`, MCP Server URL `https://frameos.studio/mcp`, Authentication OAuth with Client ID `2zmQEDyKLc8bw01o` under Advanced (secret empty; without that client ID sign-in fails), Transport Streamable HTTP. Tick the acknowledgement, click Add, then click the FrameOS card to sign in.
 - Is it connected: the FrameOS card shows as connected; then ask for the credit balance.
 - Re-authenticate: click the FrameOS card and sign in again. To pick up new FrameOS tools, remove the connector and add it again.
 
-## Devin (formerly Windsurf)
+## Devin and Windsurf (Windsurf is now Devin Desktop)
 
-- Server: `devin mcp add -s user frameos https://frameos.studio/mcp`, then `devin mcp login frameos` to sign in.
-- Plugin: `devin plugins install theSatvik/frameos-plugins`.
-- Re-authenticate: `devin mcp login frameos`.
-- Is it connected: ask the agent to call `whoami`.
+- Not available yet. The Devin CLI, Devin Desktop and the Devin web app can't sign in to FrameOS today, so don't try to add the server there.
+- Tell the user FrameOS is coming soon to Devin, suggest another app they use (or the web app at https://frameos.studio/dashboard), and give support@frameos.studio so they can ask to be told when Devin works.
+- Windsurf's old Cascade agent was removed from Devin Desktop on 8 Sep 2026 and couldn't sign in either.
 
 ## Any other MCP client
 

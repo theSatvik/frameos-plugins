@@ -2,7 +2,7 @@
 
 Users can add FrameOS today as a custom remote connector ([install guide](../install/perplexity.md)). A listing in Perplexity's own connector marketplace is by proposal only: Perplexity decides whether to build, approve and list a connector, and a proposal guarantees nothing.
 
-**Blocked until** the connector is live and has been tested as a custom connector in Perplexity ([status](../status.md)).
+**Blocked until** FrameOS has been tested as a custom connector in Perplexity. The connector is live and Perplexity can sign in with its public client ID, but nobody has run it end to end yet ([status](../status.md)).
 
 ## Checklist
 

@@ -100,7 +100,7 @@ The Cursor and VS Code snippets follow those hosts' documented formats but have 
 
 ## Error triggers
 
-Errors surface as tool errors with the real server's text, `FrameOS returned HTTP <code>: <detail>`. The MCP SDK puts `Error executing tool <name>: ` in front of it.
+Errors surface as tool errors with the real server's text, `FrameOS returned HTTP <code>: <detail>`. The MCP SDK puts `Error executing tool <name>: ` in front of it. Like the real server, every 402 ends with ` You can add credits or change plans at https://frameos.studio/pricing.`
 
 | Trigger | Result |
 |---|---|
@@ -182,7 +182,7 @@ The real server now raises `ToolError`, so agents see `FrameOS returned HTTP <co
   - bot-check and download errors, and the automatic "retrying automatically" re-run;
   - the 45-minute capacity retry and the processing timeout;
   - `cancelled` jobs;
-  - 503s ("Render queue unreachable", "Export requires the Cloud Run worker", "FrameOS API is unavailable");
+  - 503s ("Render queue unreachable", "Export requires the Cloud Run worker", "FrameOS API is unavailable. Try again in a minute.");
   - partial publishes, and Instagram's long processing.
 - **Caching and timing.** The real API caches the account (60 s) and the project list (20 s), and its tool calls time out after 45 s. The mock does neither. `export_collection` also stops starting clips after 25 s and returns the rest as `not_started`; mock exports start instantly, so only the 10-clip limit shows.
 - **Overlapping submits.** The real API takes one submit per workspace at a time and answers 429 `Another video is still being submitted in this workspace. Submit again in a few seconds.` when one waits too long. The mock handles one call at a time, so submits never overlap and this 429 never appears.

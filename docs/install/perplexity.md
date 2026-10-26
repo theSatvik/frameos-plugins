@@ -2,7 +2,7 @@
 
 Add FrameOS as a custom remote connector, and optionally upload the FrameOS skills to Perplexity Computer.
 
-> **Coming soon: Perplexity can't sign in to FrameOS yet.** The FrameOS connector is live as of 2026-10-05, but its sign-in server only admits pre-registered apps for now, and so far only Claude Code is pre-registered ([status](../status.md)). Nothing here has been tested in Perplexity yet. Steps come from Perplexity's help center.
+> **Perplexity can sign in to FrameOS** with the public client ID in step 3, but it is not tested end to end yet ([status](../status.md)). Steps come from Perplexity's help center.
 
 ## Requirements
 
@@ -22,7 +22,7 @@ Add FrameOS as a custom remote connector, and optionally upload the FrameOS skil
    | Name | `FrameOS` |
    | MCP Server URL | `https://frameos.studio/mcp` |
    | Description | `Turn long videos into captioned short clips` |
-   | Authentication | **OAuth** (leave client ID and secret empty) |
+   | Authentication | **OAuth**. Under **Advanced**, set **Client ID** to `2zmQEDyKLc8bw01o` and leave the secret empty (whether Perplexity accepts an empty secret is not verified yet) |
    | Transport | **Streamable HTTP** |
    | Icon | optional; [`assets/icon.png`](../../assets/icon.png) fits the 128 KB limit |
 
@@ -54,7 +54,7 @@ Computer accepts uploaded skills on every plan that includes Computer.
 ## Known limitations
 
 - Perplexity's documentation describes discovering sign-in settings from `/.well-known/oauth-authorization-server` and does not mention the protected-resource metadata FrameOS publishes. Whether Perplexity finds FrameOS's sign-in server on its own is not yet verified.
-- Perplexity registers itself automatically (Dynamic Client Registration) when no client ID is entered; FrameOS's sign-in server does not offer that yet ([status](../status.md#prerequisites-before-every-host-can-connect)).
+- Without the client ID, Perplexity tries to register itself (Dynamic Client Registration), which FrameOS's sign-in server does not offer, so sign-in fails ([status](../status.md#prerequisites-before-every-host-can-connect)).
 - Perplexity connects from datacenter IP ranges. If a firewall challenges those requests, they show up as 403 errors.
 - Renders take 10 to 30 minutes. Start one, then come back and ask "check my FrameOS render".
 - Uploading a file from your computer needs an agent that can run commands. In a normal Perplexity thread, share a public link instead (YouTube, Vimeo, Twitch, Kick, a public Google Drive file, or a direct video URL). Whether Perplexity Computer can do the upload is not yet verified.

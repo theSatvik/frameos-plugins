@@ -28,6 +28,7 @@ The repo root is the plugin. [README.md](README.md#packages-in-this-repo) has th
 - **No `.DS_Store`**, and no file over 256 KiB unless it is an image.
 - **Never hand-edit versions.** Use `python3 scripts/bump_version.py X.Y.Z` ([RELEASING.md](RELEASING.md)).
 - **Never edit `agent-plugin/skills/`.** It is a byte-for-byte copy of `skills/` written by `python3 scripts/sync.py` (hosts reject symlinks that leave the plugin folder).
+- **The root `.mcp.json` is Claude-only.** It holds only Claude Code's MCP keys (`type`, `url`, `headers`, `headersHelper`, `timeout`, and `oauth` with `clientId`, `callbackPort`, `scopes` as one space-separated string, `authServerMetadataUrl`), because the Claude directory blocks anything else. Codex's keys (`scopes`, `oauth_resource`, `http_headers`) live in `.codex-plugin/mcp.json`, which `.codex-plugin/plugin.json` names.
 - **Contact address:** use only support@frameos.studio and https://frameos.studio/contact. Do not add any other FrameOS email address.
 
 ## Writing skills
@@ -49,7 +50,7 @@ Each skill is `skills/<name>/SKILL.md`, optional `references/*.md`, and a requir
 
 1. Capture a fresh `tools/list` (and `initialize`) response from the real server into [`tests/fixtures/mcp-snapshot.json`](tests/fixtures/mcp-snapshot.json).
 2. Update [`dev/mock_server.py`](dev/mock_server.py) to match; a test checks that its tools, parameters and annotations equal the snapshot.
-3. Update the skills, the eval mocks in [`evals/`](evals/), and any doc that names a changed tool or behaviour.
+3. Update the skills, the eval mocks in [`evals/`](evals/) (including `evals/mocks/frameos/_tools.json`), and any doc that names a changed tool or behaviour, such as the safety-label table in [`docs/submission/openai.md`](docs/submission/openai.md).
 
 ## Docs
 

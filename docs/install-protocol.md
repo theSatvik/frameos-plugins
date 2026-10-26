@@ -10,7 +10,7 @@ A user pasted something like "Install FrameOS by following this page". You are t
 - Don't edit config files by hand when a CLI command exists for the job.
 - Bound every wait. Never loop forever.
 - A "connected" status is not proof. Only a successful `whoami` call counts.
-- **As of 2026-10-05 the FrameOS connector is live, but only Claude Code can sign in** ([status](status.md)). Every other app is coming soon: its sign-in is not enabled yet. In any other app, install if the user wants the packages ready, then stop before sign-in and tell the user clearly that sign-in for their app is not enabled yet. Don't keep retrying.
+- **The FrameOS connector is live, and every app listed below except Devin can sign in** ([status](status.md)). Claude Code, Codex, Claude, ChatGPT, Cursor and VS Code are tested end to end; Gemini CLI, Perplexity and the Copilot CLI are not yet. If sign-in fails in one of those, report the exact error and the matching guide in [docs/install/](install/) instead of retrying. Devin (including Windsurf, now Devin Desktop) can't sign in yet; see [Devin](#devin).
 - In Claude Code, the path tested end to end is connecting the connector directly ([install/claude-code.md](install/claude-code.md), route A). Signing in through the plugin's own connection, `plugin:frameos:frameos`, has not been tested yet. If it fails, tell the user and point them to route A, which means uninstalling the plugin first so the tools aren't duplicated.
 
 ## Step 1. Identify the host
@@ -23,7 +23,7 @@ Work out which app you are running in, then follow its column below.
 | Codex CLI | Yes | [Codex](#codex) |
 | Gemini CLI | Yes | [Gemini CLI](#gemini-cli) |
 | Copilot CLI | Yes | [Copilot CLI](#copilot-cli) |
-| Devin CLI or Devin Desktop | Yes | [Devin](#devin) |
+| Devin CLI or Devin Desktop | Yes, but FrameOS isn't available there yet | [Devin](#devin) |
 | Cursor agent | Yes | [Cursor](#cursor) |
 | Claude.ai chat, Claude Desktop chat, Cowork, ChatGPT, Perplexity, VS Code chat without a terminal | No, or not for app settings | [Chat apps](#chat-apps) |
 
@@ -87,15 +87,21 @@ gemini extensions install https://github.com/theSatvik/frameos-plugins
 
 ### Copilot CLI
 
+Needs Copilot CLI 1.0.83 or newer (`copilot version`; `copilot update` updates it). The Copilot CLI signs in with its own published client document, which FrameOS has registered, so there is no client ID or port to set:
+
+```bash
+copilot mcp add --transport http frameos https://frameos.studio/mcp
+```
+
+If the user also wants the skills, install the plugin too. Signing in through the plugin's own connection is not tested yet; if it fails, sign in through the `frameos` server added above.
+
 ```bash
 copilot plugin install theSatvik/frameos-plugins:agent-plugin
 ```
 
 ### Devin
 
-```bash
-devin plugins install theSatvik/frameos-plugins
-```
+FrameOS isn't available in Devin yet: the Devin CLI, Devin Desktop and the Devin web app can't sign in to it. Don't install anything. Tell the user it's coming soon, suggest another app they use ([install guides](install/)), and give support@frameos.studio so they can ask to be told when Devin works. Then stop.
 
 ### Cursor
 
@@ -126,7 +132,6 @@ Sign-in opens a browser and waits for the user, so ask the user to run it in the
 | Codex | `codex mcp login frameos` |
 | Gemini CLI | Restart Gemini CLI, then `/mcp auth frameos` |
 | Copilot CLI | `/mcp auth frameos` in a session |
-| Devin | `devin mcp login frameos` |
 | Cursor | The sign-in prompt for FrameOS in **Customize** |
 
 New plugins load in a new session: in Claude Code run `/reload-plugins` (or start a new session); in Codex and Gemini CLI start a new session.

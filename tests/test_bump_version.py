@@ -93,6 +93,11 @@ class BumpVersionTest(fx.FixtureCase):
         self.assertIn(".cursor-plugin/plugin.json: version not found", self.output)
         self.assertEqual(tree(self.root), before)
 
+    def test_server_json_version_is_left_alone(self) -> None:
+        before = self.read("server.json")
+        self.assertEqual(self.bump("9.8.7"), 0, self.output)
+        self.assertEqual(self.read("server.json"), before, "server.json has its own version")
+
     def test_extra_header_in_other_json_is_updated(self) -> None:
         self.write("dev/mock.mcp.json", json.dumps({"mcpServers": {"frameos": {"headers": {"X-FrameOS-Plugin-Version": self.old}}}}, indent=2) + "\n")
         self.assertEqual(self.bump("9.8.7"), 0, self.output)

@@ -9,13 +9,21 @@ Layouts:
   Computer's skill upload expects (max 10 MB).
 * ``dist/frameos-plugin-<version>.zip`` - the plugin contents at the ZIP root
   (exactly one ``.claude-plugin/plugin.json``) for claude.ai / Desktop "Upload
-  plugin" and the OpenAI plugin portal. Excludes repo tooling and anything that
-  is not part of the plugin: tests/, dev/, evals/, docs/submission/, dist/,
-  .git/, .github/, plus scripts/ (maintainer tooling), agent-plugin/ (the Agent
-  Plugins copy installed from GitHub; shipping it would put a second plugin
-  manifest and a second copy of every skill in the archive) and the
-  marketplace catalogs .claude-plugin/marketplace.json and .agents/ (a plugin
-  upload is one plugin, not a marketplace).
+  plugin". Excludes repo tooling and anything that is not part of the plugin:
+  tests/, dev/, evals/, docs/submission/, dist/, .git/, .github/, plus scripts/
+  (maintainer tooling), agent-plugin/ (the Agent Plugins copy installed from
+  GitHub; shipping it would put a second plugin manifest and a second copy of
+  every skill in the archive), the marketplace catalogs
+  .claude-plugin/marketplace.json and .agents/ (a plugin upload is one plugin,
+  not a marketplace) and server.json (the MCP Registry listing of the
+  connector, not part of the plugin).
+* ``dist/frameos-openai-<version>.zip`` - the OpenAI Plugin Directory upload
+  (ChatGPT and Codex). One Codex-format plugin root and nothing else:
+  ``.codex-plugin/plugin.json`` (the repo's Codex manifest, pointed at the root
+  ``.mcp.json``, plus docs/submission/openai-package.json), a generated
+  ``.mcp.json`` (the connector URL and OpenAI's CIMD sign-in block, no
+  headers), ``skills/`` (with the setup skill narrowed to ChatGPT and Codex),
+  ``assets/`` and ``LICENSE``. No Claude, Cursor or Gemini files.
 * ``dist/SHA256SUMS`` - checksums of every ZIP above.
 
 Builds are deterministic: sorted entries, fixed timestamps (1980-01-01),
@@ -32,12 +40,14 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import os
+import re
 import shutil
 import sys
 import zipfile
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -53,6 +63,7 @@ PERPLEXITY_MAX_BYTES = 10 * 1024 * 1024
 PLUGIN_EXCLUDES = (
     ".git", ".github", "tests", "dev", "evals", "dist", "docs/submission",
     "scripts", "agent-plugin", ".agents", ".claude-plugin/marketplace.json", ".gitignore",
+    "server.json",
 )
 # Names skipped everywhere (junk, caches, local test homes).
 JUNK_NAMES = {
@@ -60,6 +71,21 @@ JUNK_NAMES = {
     ".venv", "venv", "node_modules", ".codex-test", ".claude-test",
 }
 JUNK_SUFFIXES = (".pyc", ".pyo", ".swp", "~")
+
+# The OpenAI ZIP copies only these repo paths; its manifest and .mcp.json are generated.
+OPENAI_COPY = ("skills", "assets", "LICENSE")
+OPENAI_TOP_LEVEL = {".codex-plugin", ".mcp.json", "skills", "assets", "LICENSE"}
+# A Plugin Directory install only runs in ChatGPT or Codex, and OpenAI asks skills
+# to drop instructions for other products, so the setup skill's per-app guidance
+# is narrowed to these two in that ZIP. skills/ itself is unchanged. Each edit is
+# skipped when its text is absent; the banned-text check below catches drift.
+OPENAI_HOST_SECTIONS = ("Codex", "ChatGPT", "Any other MCP client")
+OTHER_APPS = ("Claude", "Cursor", "Gemini", "VS Code", "GitHub Copilot", "Perplexity", "Devin")
+OTHER_APPS_LINE = "Steps for every other app are at https://frameos.studio/plugin."
+OPENAI_BANNED = (
+    ("another AI product's name", re.compile(r"\b(claude|cowork|anthropic)\b", re.I)),
+    ("an unfilled placeholder", re.compile(r"__[A-Z][A-Z0-9_]*__")),
+)
 
 
 class BuildError(RuntimeError):
@@ -97,11 +123,13 @@ def collect(base: Path, excludes: Iterable[str] = ()) -> Tuple[List[str], Dict[s
     return sorted(dirs), files
 
 
-def write_zip(dest: Path, dirs: Sequence[str], files: Dict[str, Path], prefix: str = "") -> None:
-    """Write a deterministic ZIP. ``prefix`` (e.g. 'frameos-clip/') is prepended to every entry."""
+def write_zip(dest: Path, dirs: Sequence[str], files: Dict[str, Union[Path, bytes]], prefix: str = "") -> None:
+    """Write a deterministic ZIP. ``prefix`` (e.g. 'frameos-clip/') is prepended to every entry.
+
+    A file value is a path to read or the bytes to store."""
     dest.parent.mkdir(parents=True, exist_ok=True)
     tmp = dest.with_name(dest.name + ".tmp")
-    entries: List[Tuple[str, Optional[Path]]] = []
+    entries: List[Tuple[str, Optional[Union[Path, bytes]]]] = []
     if prefix:
         entries.append((prefix, None))
     entries += [(prefix + d, None) for d in dirs]
@@ -118,7 +146,8 @@ def write_zip(dest: Path, dirs: Sequence[str], files: Dict[str, Path], prefix: s
             else:
                 info.external_attr = FILE_MODE << 16
                 info.compress_type = zipfile.ZIP_DEFLATED
-                zf.writestr(info, path.read_bytes(), compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
+                data = path if isinstance(path, bytes) else path.read_bytes()
+                zf.writestr(info, data, compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
     os.replace(tmp, dest)
 
 
@@ -148,6 +177,107 @@ def _verify(path: Path, kind: str, skill: str = "") -> None:
         leaked = [n for n in names if any(n == e or n.startswith(e + "/") for e in PLUGIN_EXCLUDES)]
         if leaked:
             raise BuildError(f"{path}: excluded paths leaked into the plugin ZIP: {leaked[:5]}")
+    elif kind == "openai":
+        manifests = [n for n in names if n.endswith("plugin.json")]
+        if manifests != [".codex-plugin/plugin.json"]:
+            raise BuildError(f"{path}: needs exactly one plugin manifest, .codex-plugin/plugin.json, found {manifests}")
+        stray = sorted({n.split("/")[0] for n in names} - OPENAI_TOP_LEVEL)
+        if stray:
+            raise BuildError(f"{path}: only {sorted(OPENAI_TOP_LEVEL)} belong in the OpenAI ZIP, found {stray}")
+        extra = [n for n in names if n.startswith(".codex-plugin/") and n not in (".codex-plugin/", ".codex-plugin/plugin.json")]
+        if extra:
+            raise BuildError(f"{path}: .codex-plugin/ may hold only plugin.json, found {extra}")
+
+
+def _keep_sections(text: str, keep: Sequence[str], note: str) -> str:
+    """Keep the preamble and the '## ' sections whose heading starts with one of ``keep``; put ``note`` first."""
+    parts = re.split(r"(?m)^(?=## )", text)
+    kept = [p for p in parts[1:] if p[3:].startswith(tuple(keep))]
+    if len(parts) == 1 or not kept:
+        return text
+    return parts[0] + note + "\n\n" + "".join(kept)
+
+
+def openai_skill_text(rel_path: str, text: str) -> str:
+    """The ChatGPT and Codex copy of one skills/ file (see OPENAI_HOST_SECTIONS)."""
+    if rel_path == "skills/frameos-setup/references/hosts.md":
+        text = re.sub(r" \(in Claude Code[^)]*\)", "", text)
+        return _keep_sections(text, OPENAI_HOST_SECTIONS, "This copy covers ChatGPT and Codex. " + OTHER_APPS_LINE)
+    if rel_path == "skills/frameos-setup/SKILL.md":
+        text = re.sub(r"(?m)^1\. Identify the app: .*$",
+                      "1. Identify the app: ChatGPT, Codex or another MCP client. If unclear, ask once.", text)
+        text = re.sub(r"(?m)^If FrameOS was added by hand rather than as the plugin, .*$",
+                      "Full install steps, sign-out commands and app limits are in [hosts](references/hosts.md). "
+                      + OTHER_APPS_LINE, text)
+        # Table rows for other apps (reconnect steps, app-specific errors).
+        return re.sub(r"(?m)^\| (?:" + "|".join(map(re.escape, OTHER_APPS)) + r").*\n", "", text)
+    if rel_path == "skills/frameos-clip/references/workflow-details.md":
+        text = re.sub(r"(?m)^(\| Has a shell \| )[^|]*\|", r"\1Codex, or any agent with a terminal |", text)
+        return re.sub(r"(?m)^(\| Chat only \| )[^|]*\|", r"\1ChatGPT on the web, desktop or mobile |", text)
+    return text
+
+
+def openai_mcp() -> Dict[str, object]:
+    """The OpenAI ZIP's .mcp.json: the connector and OpenAI's sign-in block, and no headers."""
+    return {"mcpServers": {V.SERVER_KEY: {"url": V.MCP_URL, "extensions": {"com.openai": {"auth": V.OPENAI_MCP_AUTH}}}}}
+
+
+def _json_bytes(data: object) -> bytes:
+    return (json.dumps(data, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
+
+
+def openai_package(root: Path, version: str) -> Tuple[Dict[str, object], List[str]]:
+    """Return (the OpenAI ZIP's Codex manifest, owner TODOs still open)."""
+    try:
+        codex = V.load_json_strict(root / ".codex-plugin" / "plugin.json")
+        package = V.load_json_strict(root / V.OPENAI_PACKAGE)
+    except (OSError, ValueError) as exc:
+        raise BuildError(f"cannot build the OpenAI ZIP: {exc}") from exc
+    return V.merge_openai_manifest(codex, package, version)
+
+
+def build_openai(root: Path, dest: Path, version: str) -> Path:
+    """Write the OpenAI Plugin Directory ZIP to ``dest``."""
+    manifest, _ = openai_package(root, version)
+    files: Dict[str, Union[Path, bytes]] = {
+        ".codex-plugin/plugin.json": _json_bytes(manifest),
+        ".mcp.json": _json_bytes(openai_mcp()),
+    }
+    for name in OPENAI_COPY:
+        src = root / name
+        if src.is_file():
+            files[name] = src
+            continue
+        if not src.is_dir():
+            raise BuildError(f"{name} is missing; the OpenAI ZIP needs it")
+        for arc, path in collect(src)[1].items():
+            rel_path = f"{name}/{arc}"
+            if name == "skills" and path.suffix == ".md":
+                files[rel_path] = openai_skill_text(rel_path, path.read_text(encoding="utf-8")).encode("utf-8")
+            else:
+                files[rel_path] = path
+    # Every referenced file must ship, and nothing may carry another product's name,
+    # a placeholder client ID, a credential or a header.
+    itf = manifest.get("interface") or {}
+    refs = [itf.get(k) for k in ("logo", "composerIcon", "logoDark", "composerIconDark") if itf.get(k)]
+    refs.append((manifest.get("extensions") or {}).get("com.openai", {}).get("onboardingSkill"))
+    for ref in filter(None, refs):
+        if str(ref)[2:] not in files:
+            raise BuildError(f"the OpenAI manifest references {ref}, which is not in the ZIP")
+    for arc, value in sorted(files.items()):
+        data = value if isinstance(value, bytes) else value.read_bytes()
+        if Path(arc).suffix.lower() in V.IMAGE_EXTS - {".svg"}:
+            continue
+        text = data.decode("utf-8", errors="replace")
+        for label, pattern in OPENAI_BANNED + V.SECRET_PATTERNS:
+            m = pattern.search(text)
+            if m:
+                line = text.count("\n", 0, m.start()) + 1
+                raise BuildError(f"OpenAI ZIP {arc}:{line} contains {label} ({m.group(0)!r}); fix openai_skill_text or the source")
+    dirs = sorted({"/".join(arc.split("/")[:i]) + "/" for arc in files for i in range(1, arc.count("/") + 1)})
+    write_zip(dest, dirs, files)
+    _verify(dest, "openai")
+    return dest
 
 
 def build(root: Path, out: Optional[Path] = None, skip_sync_check: bool = False) -> Dict[str, Path]:
@@ -174,8 +304,9 @@ def build(root: Path, out: Optional[Path] = None, skip_sync_check: bool = False)
         if (out / sub).exists():
             shutil.rmtree(out / sub)
     if out.is_dir():
-        for old in out.glob("frameos-plugin-*.zip"):
-            old.unlink()
+        for pattern in ("frameos-plugin-*.zip", "frameos-openai-*.zip"):
+            for old in out.glob(pattern):
+                old.unlink()
 
     built: Dict[str, Path] = {}
     for sdir in skills:
@@ -204,6 +335,7 @@ def build(root: Path, out: Optional[Path] = None, skip_sync_check: bool = False)
     write_zip(dest, dirs, files)
     _verify(dest, "plugin")
     built["plugin"] = dest
+    built["openai"] = build_openai(root, out / f"frameos-openai-{version}.zip", version)
 
     sums = "".join(f"{sha256(p)}  {p.relative_to(out).as_posix()}\n" for p in sorted(built.values()))
     (out / "SHA256SUMS").write_text(sums, encoding="utf-8")
@@ -224,6 +356,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     for label, path in sorted(built.items()):
         print(f"{path.stat().st_size:>9}  {sha256(path)[:12]}  {path}")
     print(f"build_dist: {len(built)} ZIP(s) written")
+    version = (args.root / "VERSION").read_text(encoding="utf-8").strip()
+    for todo in openai_package(args.root.resolve(), version)[1]:
+        print(f"TODO(owner) before uploading {built['openai'].name}: {todo}")
     return 0
 
 

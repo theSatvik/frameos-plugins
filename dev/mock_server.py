@@ -43,7 +43,7 @@ from urllib.parse import quote, urlparse
 
 from mcp.server import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
-from mcp.types import ToolAnnotations
+from mcp.types import Icon, ToolAnnotations
 from pydantic import BaseModel, Field, TypeAdapter, ValidationError, field_validator
 
 # The real server's instructions, verbatim.
@@ -53,6 +53,13 @@ INSTRUCTIONS = (
 )
 
 MOCK_HOST = "https://mock.frameos.invalid"
+
+# The real server's identity (mcp_server/frameos_mcp/server.py), verbatim.
+SERVER_VERSION = "0.1.1"
+WEBSITE_URL = "https://frameos.studio/plugin"
+ICON_URL = "https://frameos.studio/frameos/frameos-favicon.png"
+# The real server adds this sentence to every 402 (a short credit balance).
+PRICING_SUFFIX = " You can add credits or change plans at https://frameos.studio/pricing."
 
 # Launch guardrail messages, verbatim from the backend: core/credits.py
 # (SHORTFALL_AT_SUBMIT, SHORTFALL_AFTER_DOWNLOAD) and api/mcp_routes.py
@@ -1881,6 +1888,8 @@ def _call(state: MockState, fn: Callable[..., Any], *args: Any) -> Any:
         result = fn(*args)
     except FrameOSHTTPError as exc:
         text = f"FrameOS returned HTTP {exc.status}: {str(exc.detail)[:300]}"
+        if exc.status == 402:
+            text += PRICING_SUFFIX
         if state.config.errors == "opaque":
             # Legacy: what the real server showed before it switched to ToolError. It
             # raised RuntimeError, which the mcp 2.2.0 SDK reports to the client only as
@@ -1896,12 +1905,14 @@ def create_server(state: Optional[MockState] = None) -> MCPServer:
     server = MCPServer(
         "frameos",
         title="FrameOS (mock)",
-        version="0.1.0",
+        website_url=WEBSITE_URL,
+        icons=[Icon(src=ICON_URL, mimeType="image/png", sizes=["256x256"])],
+        version=SERVER_VERSION,
         instructions=INSTRUCTIONS,
         log_level="WARNING",
     )
 
-    @server.tool(title="Submit Video", annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=True))
+    @server.tool(title="Submit Video", annotations=ToolAnnotations(title="Submit Video", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=True))
     async def submit_video(
         source_url: str,
         max_clips: int = 3,
@@ -1911,42 +1922,42 @@ def create_server(state: Optional[MockState] = None) -> MCPServer:
         """Submit a video URL for AI clipping. Starts a credit-consuming render job and returns its job ID. focus_prompt is an optional steer; only its first 400 characters are used."""
         return _call(state, state.submit_video, source_url, max_clips, aspect_ratio, focus_prompt)
 
-    @server.tool(title="List Projects", annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False))
+    @server.tool(title="List Projects", annotations=ToolAnnotations(title="List Projects", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def list_projects(limit: int = 10, offset: int = 0) -> list[dict]:
         """List clipping projects owned by the connected FrameOS account."""
         return _call(state, state.list_projects, limit, offset)
 
-    @server.tool(title="Get Project", annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False))
+    @server.tool(title="Get Project", annotations=ToolAnnotations(title="Get Project", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def get_project(project_id: str) -> dict:
         """Get the status and summary of one FrameOS clipping project."""
         return _call(state, state.get_project, project_id)
 
-    @server.tool(title="Get Job", annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False))
+    @server.tool(title="Get Job", annotations=ToolAnnotations(title="Get Job", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def get_job(job_id: str) -> dict:
         """Check render progress using the job ID returned by submit_video."""
         return _call(state, state.get_job, job_id)
 
-    @server.tool(title="List Clips", annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False))
+    @server.tool(title="List Clips", annotations=ToolAnnotations(title="List Clips", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def list_clips(project_id: str) -> list[dict]:
         """List project clips. If exportRequired is true, call export_clip for the captioned download."""
         return _call(state, state.list_clips, project_id)
 
-    @server.tool(title="Whoami", annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False))
+    @server.tool(title="Whoami", annotations=ToolAnnotations(title="Whoami", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def whoami() -> dict:
         """Identify the connected FrameOS user, workspace, plan, and credit balance."""
         return _call(state, state.whoami)
 
-    @server.tool(title="Get Usage", annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False))
+    @server.tool(title="Get Usage", annotations=ToolAnnotations(title="Get Usage", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def get_usage() -> dict:
         """Read the workspace's recent credit usage and current credit balance."""
         return _call(state, state.get_usage)
 
-    @server.tool(title="Describe Clip", annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False))
+    @server.tool(title="Describe Clip", annotations=ToolAnnotations(title="Describe Clip", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def describe_clip(clip_id: str) -> dict:
         """Read one clip's title, score, transcript, aspect, preview, and export requirement."""
         return _call(state, state.describe_clip, clip_id)
 
-    @server.tool(title="Get Transcript", annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False))
+    @server.tool(title="Get Transcript", annotations=ToolAnnotations(title="Get Transcript", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def get_transcript(
         project_id: str,
         start_ms: int = 0,
@@ -1958,52 +1969,52 @@ def create_server(state: Optional[MockState] = None) -> MCPServer:
         """Read a page or time range of the full source-video transcript. start_ms and end_ms are in milliseconds; the returned segments' start and end are in seconds. New renders store this artifact; older projects may lack it."""
         return _call(state, state.get_transcript, project_id, start_ms, end_ms, offset, limit, include_words)
 
-    @server.tool(title="Get Brand", annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False))
+    @server.tool(title="Get Brand", annotations=ToolAnnotations(title="Get Brand", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def get_brand() -> dict:
-        """Read the connected workspace's current brand settings; FrameOS has one brand kit, not a template library."""
+        """Read the workspace's default brand template: its logo (corner, size, opacity) and caption default. The FrameOS web app can save several brand templates, each with its own format and content type; videos submitted here render with the default one, or with no template when none is set as the default (then the brand is empty)."""
         return _call(state, state.get_brand)
 
-    @server.tool(title="Export Clip", annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
+    @server.tool(title="Export Clip", annotations=ToolAnnotations(title="Export Clip", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
     async def export_clip(clip_id: str, style: str | None = None, filename: str | None = None) -> dict:
         """Get a captioned MP4 download. May start an export job; poll get_job, then call again for its URL. A call while that job is still running returns the same job."""
         return _call(state, state.export_clip, clip_id, style, filename)
 
-    @server.tool(title="Duplicate Clip", annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
+    @server.tool(title="Duplicate Clip", annotations=ToolAnnotations(title="Duplicate Clip", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
     async def duplicate_clip(clip_id: str) -> dict:
         """Create a separate clip record using the same rendered media, without charging or re-rendering."""
         return _call(state, state.duplicate_clip, clip_id)
 
-    @server.tool(title="List Collections", annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False))
+    @server.tool(title="List Collections", annotations=ToolAnnotations(title="List Collections", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def list_collections() -> list[dict]:
         """List clip collections in the connected FrameOS workspace."""
         return _call(state, state.list_collections)
 
-    @server.tool(title="Create Collection", annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
+    @server.tool(title="Create Collection", annotations=ToolAnnotations(title="Create Collection", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
     async def create_collection(name: str) -> dict:
         """Create a named workspace collection for organizing clips."""
         return _call(state, state.create_collection, name)
 
-    @server.tool(title="Add Clip To Collection", annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
+    @server.tool(title="Add Clip To Collection", annotations=ToolAnnotations(title="Add Clip To Collection", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def add_clip_to_collection(collection_id: str, clip_id: str) -> dict:
         """Add an owned clip to an owned collection; repeated calls do not create duplicates."""
         return _call(state, state.add_clip_to_collection, collection_id, clip_id)
 
-    @server.tool(title="List Clips In Collection", annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False))
+    @server.tool(title="List Clips In Collection", annotations=ToolAnnotations(title="List Clips In Collection", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def list_clips_in_collection(collection_id: str) -> list[dict]:
         """List clips in a workspace collection with fresh preview URLs."""
         return _call(state, state.list_clips_in_collection, collection_id)
 
-    @server.tool(title="Export Collection", annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
+    @server.tool(title="Export Collection", annotations=ToolAnnotations(title="Export Collection", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
     async def export_collection(collection_id: str) -> dict:
         """Get captioned export URLs or export job IDs for up to 50 clips in a collection. Each call keeps at most 10 clips rendering; clips with status not_started need another call once those finish. A clip already rendering returns its running job."""
         return _call(state, state.export_collection, collection_id)
 
-    @server.tool(title="Create Upload Link", annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
+    @server.tool(title="Create Upload Link", annotations=ToolAnnotations(title="Create Upload Link", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
     async def create_upload_link(filename: str, content_type: str = "video/mp4") -> dict:
         """Get a one-hour signed PUT URL for a video file; upload bytes, then call submit_uploaded_video."""
         return _call(state, state.create_upload_link, filename, content_type)
 
-    @server.tool(title="Submit Uploaded Video", annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
+    @server.tool(title="Submit Uploaded Video", annotations=ToolAnnotations(title="Submit Uploaded Video", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
     async def submit_uploaded_video(
         gs_path: str,
         max_clips: int = 3,
@@ -2013,17 +2024,17 @@ def create_server(state: Optional[MockState] = None) -> MCPServer:
         """Start clipping an uploaded file using the gs_path from create_upload_link. Consumes credits. focus_prompt is an optional steer; only its first 400 characters are used."""
         return _call(state, state.submit_uploaded_video, gs_path, max_clips, aspect_ratio, focus_prompt)
 
-    @server.tool(title="Set Caption Style", annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
+    @server.tool(title="Set Caption Style", annotations=ToolAnnotations(title="Set Caption Style", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False))
     async def set_caption_style(clip_id: str, style: str, appearance: dict | None = None) -> dict:
         """Change the saved overlay caption style and optional appearance; export uses the new look."""
         return _call(state, state.set_caption_style, clip_id, style, appearance)
 
-    @server.tool(title="Recaption Clip", annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
+    @server.tool(title="Recaption Clip", annotations=ToolAnnotations(title="Recaption Clip", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False))
     async def recaption_clip(clip_id: str, style: str, appearance: dict | None = None) -> dict:
         """Re-render captions on an older burned-caption clip; returns a job to poll."""
         return _call(state, state.recaption_clip, clip_id, style, appearance)
 
-    @server.tool(title="Create Thumbnail Job", annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=True))
+    @server.tool(title="Create Thumbnail Job", annotations=ToolAnnotations(title="Create Thumbnail Job", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=True))
     async def create_thumbnail_job(
         clip_id: str | None = None,
         video_id: str | None = None,
@@ -2037,22 +2048,22 @@ def create_server(state: Optional[MockState] = None) -> MCPServer:
         return _call(state, state.create_thumbnail_job, clip_id, video_id, url, max_thumbnails, include_face,
                      aspect, style_ref)
 
-    @server.tool(title="Get Thumbnail Job", annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False))
+    @server.tool(title="Get Thumbnail Job", annotations=ToolAnnotations(title="Get Thumbnail Job", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def get_thumbnail_job(job_id: str) -> dict:
         """Check a thumbnail job's progress and result images."""
         return _call(state, state.get_job, job_id)
 
-    @server.tool(title="List Thumbnails", annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False))
+    @server.tool(title="List Thumbnails", annotations=ToolAnnotations(title="List Thumbnails", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def list_thumbnails(limit: int = 30) -> list[dict]:
         """List generated thumbnails in the connected workspace."""
         return _call(state, state.list_thumbnails, limit)
 
-    @server.tool(title="List Social Accounts", annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False))
+    @server.tool(title="List Social Accounts", annotations=ToolAnnotations(title="List Social Accounts", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def list_social_accounts() -> list[dict]:
         """List social publishing accounts already connected to the FrameOS workspace."""
         return _call(state, state.list_social_accounts)
 
-    @server.tool(title="Generate Social Copy", annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
+    @server.tool(title="Generate Social Copy", annotations=ToolAnnotations(title="Generate Social Copy", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def generate_social_copy(
         clip_id: str,
         platform: Literal["youtube", "instagram", "facebook", "linkedin", "tiktok", "x"],
@@ -2061,7 +2072,7 @@ def create_server(state: Optional[MockState] = None) -> MCPServer:
         """Draft title, caption, and hashtags from a clip transcript using the configured model; does not post or charge credits."""
         return _call(state, state.generate_social_copy, clip_id, platform, tone)
 
-    @server.tool(title="Post Clip", annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=True))
+    @server.tool(title="Post Clip", annotations=ToolAnnotations(title="Post Clip", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=True))
     async def post_clip(
         clip_id: str,
         account_id: str,

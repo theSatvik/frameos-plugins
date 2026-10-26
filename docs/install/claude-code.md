@@ -1,6 +1,6 @@
 # Install FrameOS in Claude Code
 
-Claude Code is the first app that can sign in to FrameOS. Connect it and you can ask Claude Code things like "turn this episode into 5 shorts" or "restyle the captions on my best clip".
+Claude Code was the first app to sign in to FrameOS. Connect it and you can ask Claude Code things like "turn this episode into 5 shorts" or "restyle the captions on my best clip".
 
 | Route | You get | Status |
 |---|---|---|
@@ -9,7 +9,7 @@ Claude Code is the first app that can sign in to FrameOS. Connect it and you can
 
 Pick one. Using both gives you two copies of every FrameOS tool.
 
-> **Status, 2026-10-05.** The FrameOS connector is live, and Claude Code is the only app that can sign in so far ([status](../status.md)). Route A passed a real end-to-end test: sign-in, consent, then `whoami` and `list_projects` returned the account's real data. Route B points at the same connector, but its sign-in has not been tested yet.
+> **Status, 2026-10-05.** The FrameOS connector is live, and Claude Code was the first app to sign in ([status](../status.md) lists the others). Route A passed a real end-to-end test: sign-in, consent, then `whoami` and `list_projects` returned the account's real data. Route B points at the same connector, but its sign-in has not been tested yet.
 
 ## Requirements
 

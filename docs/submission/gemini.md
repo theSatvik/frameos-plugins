@@ -2,7 +2,7 @@
 
 There is no submission form. The gallery at https://geminicli.com/extensions (registry: https://geminicli.com/extensions.json) is built by a crawler that runs daily and picks up public GitHub repos that meet the requirements below.
 
-**Blocked until** the connector is live and the extension has been tested in Gemini CLI ([status](../status.md)). Listing earlier would show users an extension that can't sign in.
+**Blocked until** the extension has been tested in Gemini CLI. The connector is live and Gemini CLI can sign in through the public client ID in `gemini-extension.json`, but nobody has run it end to end yet ([status](../status.md)). Listing earlier could show users an extension that doesn't work.
 
 ## Checklist
 

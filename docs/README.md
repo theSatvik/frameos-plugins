@@ -16,9 +16,9 @@
 | Gemini CLI | [install/gemini-cli.md](install/gemini-cli.md) |
 | VS Code and GitHub Copilot | [install/vscode-copilot.md](install/vscode-copilot.md) |
 | Perplexity | [install/perplexity.md](install/perplexity.md) |
-| Devin and Windsurf | [install/devin-windsurf.md](install/devin-windsurf.md) |
+| Devin and Windsurf (coming soon) | [install/devin-windsurf.md](install/devin-windsurf.md) |
 | Anything else | [install/other-agents.md](install/other-agents.md) |
 
 ## Directory submissions (maintainers)
 
-[Anthropic](submission/anthropic.md) - [OpenAI](submission/openai.md) - [Cursor](submission/cursor.md) - [Gemini CLI](submission/gemini.md) - [Perplexity](submission/perplexity.md) - [GitHub Copilot](submission/copilot.md) - [MCP Registry](submission/mcp-registry.md)
+[Anthropic](submission/anthropic.md) - [OpenAI](submission/openai.md) - [Grok, Grok Bot and Cursor](submission/grok-cursor.md) - [MCP Registry](submission/mcp-registry.md) - [Community directories](submission/community.md) - [Cursor](submission/cursor.md) - [Gemini CLI](submission/gemini.md) - [Perplexity](submission/perplexity.md) - [GitHub Copilot](submission/copilot.md)

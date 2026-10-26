@@ -1,8 +1,8 @@
 # Submission checklist: Cursor Marketplace
 
-Apply at https://cursor.com/marketplace/publish (sign in, then submit a plugin publisher application). Every plugin is reviewed by hand before it is listed, every update is reviewed again, and marketplace plugins must be open source in a public Git repo.
+**Submit through the x.ai form instead:** it lists FrameOS in the Cursor Marketplace and Grok Bot at once, and the field-by-field answers are in [grok-cursor.md](grok-cursor.md). Don't also apply at https://cursor.com/marketplace/publish; it is the same catalog. Every plugin is reviewed by hand before it is listed, every update is reviewed again, and marketplace plugins must be open source in a public Git repo.
 
-**Blocked until** the connector is live and sign-in works in Cursor ([status](../status.md)), and the plugin has been tested locally (last item).
+Cursor desktop signs in and was tested end to end on 2026-10-08 ([status](../status.md)). Cursor's own client document, used by Cursor web, Cloud Agents and Grok Bot, was pre-registered in Clerk on 2026-10-23; none of those is tested end to end yet (see [grok-cursor.md](grok-cursor.md)).
 
 ## Checklist
 
@@ -20,14 +20,15 @@ Cursor's publishing checklist, and where this repo stands:
 
 ## Sign-in requirements in Cursor
 
-- Cursor uses Dynamic Client Registration, or a static client ID in `auth.CLIENT_ID` (CIMD support is not documented). FrameOS's sign-in server needs DCR on.
-- Without a static client ID, Cursor requests the scopes listed in the sign-in server's `/.well-known/oauth-authorization-server`, so `frameos:mcp` must be advertised there and granted by default.
-- If FrameOS ever moves to a pre-registered client, register both Cursor redirect URIs: `https://www.cursor.com/agents/mcp/oauth/callback` (web and Cloud Agents) and `http://localhost:8787/callback` (desktop).
+- Cursor signs in with the public client ID in `.cursor-plugin/plugin.json` (`auth.CLIENT_ID` `xdXqonkwYm2XzM1Z`), because FrameOS's sign-in server has Dynamic Client Registration off.
+- That client allows `http://localhost:8787/callback` (desktop, working). Whether it also needs `https://www.cursor.com/agents/mcp/oauth/callback` (web and Cloud Agents) and `https://www.cursor.com/bot/mcp/oauth/callback` (Grok Bot), now that Cursor's client document is registered, is still to confirm ([grok-cursor.md](grok-cursor.md)).
+- Cursor's own client metadata document, `https://cursor.com/oauth/mcp-client.json`, was pre-registered in Clerk on 2026-10-23 (Cursor web, Cloud Agents and Grok Bot); not tested end to end yet.
+- `cursor.directory` reportedly reads the root `.mcp.json`, which has no Cursor client ID; test an install from there after listing.
 
 ## Listing extras
 
 - One-click install button for docs and the website. Cursor's own badge images are `https://cursor.com/deeplink/mcp-install-dark.svg` and `https://cursor.com/deeplink/mcp-install-light.svg`; the link is the one in [the install guide](../install/cursor.md#a-one-click-install-link).
-- Community directory: https://cursor.directory lists community plugins and MCP servers. Its submission process is not yet verified.
+- Community directory: https://cursor.directory lists community plugins and MCP servers; see [community.md](community.md#cursor-directory-cursordirectory).
 
 ## Team marketplaces (no review needed)
 

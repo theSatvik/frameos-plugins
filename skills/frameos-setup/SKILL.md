@@ -28,7 +28,7 @@ Get FrameOS connected in the user's app, prove it with a live account check, and
 
 1. Call `whoami`. Only a successful answer proves FrameOS is connected. An "installed", "enabled" or "connected" label in the app is not proof.
 2. On success, tell the user in two or three short lines:
-   - the workspace name and plan (free, starter or pro);
+   - the workspace name and plan, by the name the FrameOS site uses: `free` is Free, `starter` is Pro, `pro` is Max;
    - their spendable FrameOS credits, and any trial credits with the date they expire;
    - that the balance can lag by up to a minute.
 3. Offer three starting points, then stop:
@@ -41,7 +41,7 @@ Get FrameOS connected in the user's app, prove it with a live account check, and
 ## 2. If no FrameOS tools are available
 
 No FrameOS tools in your tool list means the plugin or connector is not installed or not enabled in this app.
-1. Identify the app: Claude Code, Claude.ai / Desktop / Cowork, Codex, ChatGPT, Cursor, Gemini CLI, VS Code / GitHub Copilot, Perplexity, Devin, or another MCP client. If unclear, ask once.
+1. Identify the app: Claude Code, Claude.ai / Desktop / Cowork, Codex, ChatGPT, Cursor, Gemini CLI, VS Code / GitHub Copilot, Perplexity, Devin (including Windsurf, now Devin Desktop), or another MCP client. If unclear, ask once.
 2. Give the install and sign-in steps for that app from [hosts](references/hosts.md). The server is always `https://frameos.studio/mcp` (Streamable HTTP, OAuth sign-in).
 3. In terminal apps you may run the install commands yourself when the user asked you to install FrameOS. Sign-in always happens in the user's own browser: never ask for passwords, tokens, codes or redirect URLs in chat.
 4. Most apps only show new tools in a new session or chat. Ask the user to start one, then run step 1.
@@ -58,7 +58,9 @@ FrameOS errors arrive as `FrameOS returned HTTP <code>: <detail>`, or as `FrameO
 | 503 `OAuth verification is not configured`, `OAuth verification unavailable` or `Invalid OAuth verification response` | FrameOS cannot check sign-ins right now | FrameOS-side; try again later |
 | `FrameOS API is unavailable`, or another 503 | FrameOS is briefly unreachable | retry once after a minute |
 | The app cannot reach the server at all: "endpoint not found", 404 on connect, "Failed to connect" | the FrameOS service is not reachable at that address | nothing to fix on the user's side; try later, and contact support@frameos.studio if it persists |
-| Sign-in breaks before reaching FrameOS: "registration failed", "issuer mismatch", "missing issuer parameter" | FrameOS's sign-in service does not accept this app yet | send the app name and the exact error to support@frameos.studio |
+| GitHub Copilot CLI: a registration error while signing in | usually a Copilot CLI older than 1.0.83, which can't use FrameOS's sign-in | update it (`copilot update`), then `/mcp auth frameos`; if it still fails, send the exact error to support@frameos.studio |
+| Sign-in breaks before reaching FrameOS: "registration failed", "Dynamic client registration not supported" | the app tried to register itself, which FrameOS's sign-in service doesn't allow | send the app name and the exact error to support@frameos.studio |
+| "issuer mismatch", "missing issuer parameter" | a sign-in problem on FrameOS's side | send the app name and the exact error to support@frameos.studio |
 | `whoami` shows the wrong workspace or person | signed in with another account | sign out (see [hosts](references/hosts.md)), then sign in with the right account |
 | A tool says something is "not found" | that item does not exist or is in another workspace | not a connection problem; confirm the workspace with `whoami` |
 
@@ -77,7 +79,7 @@ A 404 from a tool call is about an item. A 404 while the app connects is about t
 | VS Code | Command Palette > MCP: List Servers > frameos > Restart | MCP: List Servers > frameos > Show Output |
 | GitHub Copilot CLI | `/mcp auth frameos` | `/mcp list` |
 | Perplexity | Account settings > Connectors > FrameOS card > authenticate | the connector card |
-| Devin | `devin mcp login frameos` | ask the agent to call `whoami` |
+| Devin | not available yet: Devin can't sign in to FrameOS; suggest another app, and support@frameos.studio to be told when it works | n/a |
 
 If FrameOS was added by hand rather than as the plugin, the server name in Claude Code is `frameos` instead of `plugin:frameos:frameos`. Full install steps, sign-out commands and app limits are in [hosts](references/hosts.md).
 

@@ -189,8 +189,12 @@ class VersionTest(fx.FixtureCase):
         self.assertError(".claude-plugin/marketplace.json", "plugins[name=frameos].version")
 
     def test_header_drift(self) -> None:
-        self._edit_json(".mcp.json", lambda d: d["mcpServers"]["frameos"]["http_headers"].__setitem__(validate.VERSION_HEADER, "0.0.1"))
-        self.assertError(".mcp.json", "http_headers", "'0.0.1'")
+        self._edit_json(".codex-plugin/mcp.json", lambda d: d["mcpServers"]["frameos"]["http_headers"].__setitem__(validate.VERSION_HEADER, "0.0.1"))
+        self.assertError(".codex-plugin/mcp.json", "http_headers", "'0.0.1'")
+
+    def test_root_header_drift(self) -> None:
+        self._edit_json(".mcp.json", lambda d: d["mcpServers"]["frameos"]["headers"].__setitem__(validate.VERSION_HEADER, "0.0.1"))
+        self.assertError(".mcp.json", "headers", "'0.0.1'")
 
     def test_missing_header(self) -> None:
         self._edit_json("agent-plugin/mcp.json", lambda d: d["mcpServers"]["frameos"].pop("headers"))
@@ -216,8 +220,35 @@ class McpConfigTest(fx.FixtureCase):
         self.assertError("gemini-extension.json", "httpUrl must be https://frameos.studio/mcp")
 
     def test_oauth_resource_mismatch(self) -> None:
-        self._edit_json(".mcp.json", lambda d: d["mcpServers"]["frameos"].__setitem__("oauth_resource", "https://frameos.studio"))
-        self.assertError(".mcp.json", "oauth_resource must equal url")
+        self._edit_json(".codex-plugin/mcp.json", lambda d: d["mcpServers"]["frameos"].__setitem__("oauth_resource", "https://frameos.studio"))
+        self.assertError(".codex-plugin/mcp.json", "oauth_resource must equal url")
+
+    def test_codex_keys_in_root_mcp_json(self) -> None:
+        for key, value in (("scopes", ["frameos:mcp"]), ("oauth_resource", "https://frameos.studio/mcp"), ("http_headers", {})):
+            with self.subTest(key=key):
+                self._edit_json(".mcp.json", lambda d: d["mcpServers"]["frameos"].__setitem__(key, value))
+                self.assertError(".mcp.json", "not in Claude Code's MCP schema", key)
+                self._edit_json(".mcp.json", lambda d: d["mcpServers"]["frameos"].pop(key))
+
+    def test_root_scopes_must_be_a_string(self) -> None:
+        self._edit_json(".mcp.json", lambda d: d["mcpServers"]["frameos"]["oauth"].__setitem__("scopes", ["frameos:mcp"]))
+        self.assertError(".mcp.json", "one space-separated string")
+
+    def test_root_unknown_oauth_key(self) -> None:
+        self._edit_json(".mcp.json", lambda d: d["mcpServers"]["frameos"]["oauth"].__setitem__("resource", "https://frameos.studio/mcp"))
+        self.assertError(".mcp.json", "oauth has keys not in Claude Code's MCP schema", "resource")
+
+    def test_root_client_id_rejected(self) -> None:
+        self._edit_json(".mcp.json", lambda d: d["mcpServers"]["frameos"]["oauth"].__setitem__("clientId", "xdXqonkwYm2XzM1Z"))
+        self.assertError(".mcp.json", "clientId would replace")
+
+    def test_codex_manifest_must_name_its_own_file(self) -> None:
+        self._edit_json(".codex-plugin/plugin.json", lambda d: d.__setitem__("mcpServers", "./.mcp.json"))
+        self.assertError(".codex-plugin/plugin.json", "mcpServers must be './.codex-plugin/mcp.json'")
+
+    def test_codex_file_ignores_headers(self) -> None:
+        self._edit_json(".codex-plugin/mcp.json", lambda d: d["mcpServers"]["frameos"].__setitem__("headers", {}))
+        self.assertError(".codex-plugin/mcp.json", "use http_headers")
 
     def test_two_servers(self) -> None:
         self._edit_json(".mcp.json", lambda d: d["mcpServers"].__setitem__("other", {"type": "http", "url": "https://example.com/mcp"}))
@@ -239,6 +270,51 @@ class McpConfigTest(fx.FixtureCase):
         text = self.read(".mcp.json")
         self.write(".mcp.json", text.replace('"type": "http",', '"type": "http",\n      "type": "http",', 1))
         self.assertError(".mcp.json", "duplicate key")
+
+
+class RegistryTest(fx.FixtureCase):
+    REL = "server.json"
+
+    def _edit(self, fn) -> None:
+        data = json.loads(self.read(self.REL))
+        fn(data)
+        self.write(self.REL, json.dumps(data, indent=2) + "\n")
+
+    def test_missing_server_json(self) -> None:
+        self.path(self.REL).unlink()
+        self.assertError(self.REL, "missing")
+
+    def test_description_over_100(self) -> None:
+        self._edit(lambda d: d.__setitem__("description", "x" * 101))
+        self.assertError(self.REL, "description must be a string of 1 to 100 characters")
+
+    def test_wrong_name(self) -> None:
+        self._edit(lambda d: d.__setitem__("name", "io.github.theSatvik/frameos"))
+        self.assertError(self.REL, "name must be 'studio.frameos/frameos'")
+
+    def test_version_range_rejected(self) -> None:
+        self._edit(lambda d: d.__setitem__("version", "^1.0.0"))
+        self.assertError(self.REL, "version must be a semantic version")
+
+    def test_version_is_independent_of_plugin_version(self) -> None:
+        self._edit(lambda d: d.__setitem__("version", "7.3.0"))
+        self.assertNoErrors()
+
+    def test_remote_headers_rejected(self) -> None:
+        self._edit(lambda d: d["remotes"][0].__setitem__("headers", [{"name": "X-Test", "value": "1"}]))
+        self.assertError(self.REL, "remotes[0].headers must be empty")
+
+    def test_wrong_remote_url(self) -> None:
+        self._edit(lambda d: d["remotes"][0].__setitem__("url", "https://frameos.studio/mcp/"))
+        self.assertError(self.REL, "remotes[0] must be")
+
+    def test_repository_id_must_be_a_string(self) -> None:
+        self._edit(lambda d: d["repository"].__setitem__("id", 1400829488))
+        self.assertError(self.REL, "repository.id must be the GitHub repo ID as a string")
+
+    def test_unknown_key(self) -> None:
+        self._edit(lambda d: d.__setitem__("homepage", "https://frameos.studio"))
+        self.assertError(self.REL, "keys not in the MCP Registry server schema", "homepage")
 
 
 class CodexTest(fx.FixtureCase):
@@ -272,6 +348,107 @@ class CodexTest(fx.FixtureCase):
     def test_http_url_rejected(self) -> None:
         self._itf(lambda i: i.__setitem__("privacyPolicyURL", "http://frameos.studio/privacy"))
         self.assertError(self.REL, "privacyPolicyURL must be an https URL")
+
+    def test_dark_brand_color_needs_contrast_with_212121(self) -> None:
+        # The light brand colour reused for dark mode is 1.22:1, under OpenAI's 2:1.
+        self._itf(lambda i: i.__setitem__("brandColorDark", "#0B0B0D"))
+        self.assertError(self.REL, "brandColorDark #0B0B0D has 1.22:1 contrast against #212121")
+
+    def test_light_brand_color_needs_contrast_with_white(self) -> None:
+        self._itf(lambda i: i.__setitem__("brandColor", "#D6FF3F"))
+        self.assertError(self.REL, "brandColor #D6FF3F has 1.15:1 contrast against #FFFFFF")
+
+    def test_repo_colors_pass(self) -> None:
+        itf = json.loads(self.read(self.REL))["interface"]
+        self.assertGreaterEqual(validate.contrast_ratio(itf["brandColor"], "#FFFFFF"), 2)
+        self.assertGreaterEqual(validate.contrast_ratio(itf["brandColorDark"], "#212121"), 2)
+
+
+class OpenAIPackageTest(fx.FixtureCase):
+    REL = validate.OPENAI_PACKAGE
+
+    def _edit(self, fn) -> None:
+        data = json.loads(self.read(self.REL))
+        fn(data)
+        self.write(self.REL, json.dumps(data, indent=2) + "\n")
+
+    def _openai(self, data: dict) -> dict:
+        return data["extensions"]["com.openai"]
+
+    def test_exactly_five_positive_cases(self) -> None:
+        self._edit(lambda d: self._openai(d)["review"]["test_cases"]["positive"].pop())
+        self.assertError(self.REL, "positive needs exactly 5 cases")
+
+    def test_exactly_three_negative_cases(self) -> None:
+        self._edit(lambda d: self._openai(d)["review"]["test_cases"]["negative"].append({"description": "x", "prompt": "y"}))
+        self.assertError(self.REL, "negative needs exactly 3 cases")
+
+    def test_positive_case_needs_expected_behavior(self) -> None:
+        self._edit(lambda d: self._openai(d)["review"]["test_cases"]["positive"][0].pop("expected_behavior"))
+        self.assertError(self.REL, "positive[0].expected_behavior is required")
+
+    def test_unknown_tool_in_tools_triggered(self) -> None:
+        self._edit(lambda d: self._openai(d)["review"]["test_cases"]["positive"][0].__setitem__("tools_triggered", "whoami, list_videos"))
+        self.assertError(self.REL, "names tools the connector doesn't have", "list_videos")
+
+    def test_platform_video_link_rejected(self) -> None:
+        self._edit(lambda d: self._openai(d)["review"]["test_cases"]["positive"][1].__setitem__(
+            "prompt", "Turn https://www.youtube.com/watch?v=abc into 3 shorts."))
+        self.assertError(self.REL, "links a platform video")
+
+    def test_sample_video_must_be_frameos_media(self) -> None:
+        self._edit(lambda d: d["fill_before_upload"].__setitem__("sample_video_url", "https://youtu.be/abc"))
+        self.assertError(self.REL, "sample_video_url must be media FrameOS owns")
+
+    def test_credentials_key_rejected(self) -> None:
+        self._edit(lambda d: self._openai(d)["review"].__setitem__("test_credentials", {"email": "x"}))
+        self.assertError(self.REL, "the ZIP import rejects 'test_credentials'")
+
+    def test_price_in_listing_rejected(self) -> None:
+        self._edit(lambda d: d["interface"].__setitem__("longDescription", "Clips from $5 a month."))
+        self.assertError(self.REL, "interface.longDescription quotes a price")
+
+    def test_free_trial_in_listing_rejected(self) -> None:
+        self._edit(lambda d: d["interface"].__setitem__("longDescription", "Start your free trial today."))
+        self.assertError(self.REL, "quotes a price, code or trial")
+
+    def test_merged_listing_limits_apply(self) -> None:
+        self._edit(lambda d: d["interface"].__setitem__("shortDescription", "z" * 31))
+        self.assertError(self.REL, "merged OpenAI listing", "shortDescription", "at most 30")
+
+    def test_onboarding_skill_must_exist(self) -> None:
+        self._edit(lambda d: self._openai(d).__setitem__("onboardingSkill", "./skills/frameos-nope/SKILL.md"))
+        self.assertError(self.REL, "onboardingSkill './skills/frameos-nope/SKILL.md'")
+
+    def test_demo_link_goes_in_fill_before_upload(self) -> None:
+        self._edit(lambda d: self._openai(d)["review"].__setitem__("demo_recording_url", "https://example.com/demo"))
+        self.assertError(self.REL, "fill_before_upload.demo_recording_url")
+
+    def test_filled_links_must_be_https(self) -> None:
+        self._edit(lambda d: d["fill_before_upload"].__setitem__("demo_recording_url", "http://example.com/demo"))
+        self.assertError(self.REL, "demo_recording_url must be empty or an https URL")
+
+    def test_merge_fills_version_and_links(self) -> None:
+        data = json.loads(self.read(self.REL))
+        codex = json.loads(self.read(".codex-plugin/plugin.json"))
+        merged, todos = validate.merge_openai_manifest(codex, data, "9.8.7")
+        self.assertEqual(len(todos), 2)
+        self.assertEqual(merged["mcpServers"], "./.mcp.json")
+        openai = merged["extensions"]["com.openai"]
+        self.assertIn("9.8.7", openai["publication"]["release_notes"])
+        self.assertIn(validate.OPENAI_SAMPLE_PLACEHOLDER, json.dumps(openai))
+        self.assertNotIn("demo_recording_url", openai["review"])
+        data["fill_before_upload"].update(sample_video_url="https://frameos.studio/review/talk.mp4",
+                                          demo_recording_url="https://frameos.studio/review/demo")
+        merged, todos = validate.merge_openai_manifest(codex, data, "9.8.7")
+        self.assertEqual(todos, [])
+        openai = merged["extensions"]["com.openai"]
+        self.assertEqual(openai["review"]["demo_recording_url"], "https://frameos.studio/review/demo")
+        self.assertIn("https://frameos.studio/review/talk.mp4", json.dumps(openai))
+        self.assertNotIn("{sample_video_url}", json.dumps(merged))
+        # The repo's Codex manifest is left alone.
+        self.assertEqual(codex["mcpServers"], "./.codex-plugin/mcp.json")
+        self.assertNotIn("extensions", codex)
 
 
 class FilesTest(fx.FixtureCase):

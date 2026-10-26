@@ -17,10 +17,20 @@ What is checked (see the check_* functions):
   * every manifest parses (no duplicate keys) and names the plugin ``frameos``;
   * one version everywhere: VERSION, all manifests and marketplace entries,
     and every ``X-FrameOS-Plugin-Version`` header; VERSION is semver;
-  * MCP configs: endpoint https://frameos.studio/mcp, oauth_resource == url,
-    exactly one server named ``frameos`` per host config, right transport;
+  * MCP configs: endpoint https://frameos.studio/mcp, exactly one server named
+    ``frameos`` per host config, right transport; the root ``.mcp.json`` uses
+    only Claude Code's MCP schema keys (Codex's keys live in
+    ``.codex-plugin/mcp.json``, where oauth_resource == url);
+  * server.json (MCP Registry listing): name, description length, remote,
+    repository and icons. Its version is the listing's own and is independent
+    of VERSION;
   * host-specific manifest rules (Agent Plugins keys, Cursor schema keys,
-    Codex ``interface`` fields and limits, Gemini extension, icons);
+    Codex ``interface`` fields, limits and brand-colour contrast, Gemini
+    extension, icons);
+  * docs/submission/openai-package.json, the OpenAI Plugin Directory additions
+    (5 positive and 3 negative review cases naming real tools, no platform
+    video links, commerce answer, release notes, no credentials), checked again
+    after merging into the Codex listing;
   * skills: portable frontmatter, body limits, ground-rules block identical to
     scripts/ground_rules.md, relative links resolve inside the skill, tool names
     exist in the MCP snapshot, ``agents/openai.yaml`` metadata, and the
@@ -99,11 +109,14 @@ MANIFESTS = (
     ".codex-plugin/plugin.json",
     ".agents/plugins/marketplace.json",
     ".mcp.json",
+    ".codex-plugin/mcp.json",
     ".cursor-plugin/plugin.json",
     "gemini-extension.json",
     "agent-plugin/plugin.json",
     "agent-plugin/mcp.json",
     ".github/plugin/marketplace.json",
+    "server.json",
+    "docs/submission/openai-package.json",
 )
 
 # A path element that is a dict selects the list item whose fields match it.
@@ -120,7 +133,7 @@ VERSION_SITES: Tuple[Tuple[str, JsonPath], ...] = (
     ("agent-plugin/plugin.json", ("version",)),
     (".github/plugin/marketplace.json", ("plugins", _SEL, "version")),
     (".mcp.json", ("mcpServers", SERVER_KEY, "headers", VERSION_HEADER)),
-    (".mcp.json", ("mcpServers", SERVER_KEY, "http_headers", VERSION_HEADER)),
+    (".codex-plugin/mcp.json", ("mcpServers", SERVER_KEY, "http_headers", VERSION_HEADER)),
     (".cursor-plugin/plugin.json", ("mcpServers", SERVER_KEY, "headers", VERSION_HEADER)),
     ("gemini-extension.json", ("mcpServers", SERVER_KEY, "headers", VERSION_HEADER)),
     ("agent-plugin/mcp.json", ("mcpServers", SERVER_KEY, "headers", VERSION_HEADER)),
@@ -137,6 +150,19 @@ AGENT_PLUGIN_KEYS = {
     "repository", "license", "keywords", "extensions",
 }
 AGENT_MCP_KEYS = {"$schema", "mcpServers"}
+# Claude Code's MCP schema for an http server; the Claude directory portal blocks
+# a plugin whose .mcp.json entries carry anything else.
+CLAUDE_HTTP_KEYS = {"type", "url", "headers", "headersHelper", "oauth", "timeout"}
+CLAUDE_OAUTH_KEYS = {"clientId", "callbackPort", "scopes", "authServerMetadataUrl"}
+CODEX_MCP_FILE = "./.codex-plugin/mcp.json"
+REGISTRY_SCHEMA = "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json"
+REGISTRY_NAME = "studio.frameos/frameos"
+REGISTRY_KEYS = {
+    "$schema", "_meta", "name", "title", "description", "version", "websiteUrl",
+    "repository", "icons", "remotes", "packages",
+}
+REPO_URL = "https://github.com/theSatvik/frameos-plugins"
+ICON_MIME_TYPES = {"image/png", "image/jpeg", "image/jpg", "image/svg+xml", "image/webp"}
 CURSOR_KEYS = {
     "name", "displayName", "description", "version", "minClientVersions", "author",
     "publisher", "homepage", "repository", "license", "logo", "keywords", "category",
@@ -152,6 +178,24 @@ CODEX_CATEGORIES = {
     "Data & Analytics", "Communication", "Education & Research", "Security",
     "Finance", "Healthcare", "Travel", "Entertainment", "Other",
 }
+# OpenAI Plugin Directory: the listing's additions, merged into the ZIP that
+# scripts/build_dist.py builds (developers.openai.com/plugins/deploy/submission).
+OPENAI_PACKAGE = "docs/submission/openai-package.json"
+OPENAI_MCP_AUTH = {"type": "oauth", "client": {"mode": "cimd"}, "baseScopes": [OAUTH_SCOPE]}
+OPENAI_PACKAGE_KEYS = {"_about", "fill_before_upload", "interface", "extensions"}
+OPENAI_FILL_KEYS = {"_about", "sample_video_url", "demo_recording_url"}
+OPENAI_EXTENSION_KEYS = {"onboardingSkill", "review", "publication"}
+OPENAI_REVIEW_KEYS = {"test_cases", "demo_recording_url", "commerce", "commerce_description"}
+OPENAI_PUBLICATION_KEYS = {"countries", "release_notes", "translations"}
+OPENAI_CASE_KEYS = {
+    "description", "prompt", "tools_triggered", "expected_behavior", "file_attachment_urls", "expected_output_url",
+}
+# The ZIP import rejects these outright; reviewer access goes in the dashboard only.
+OPENAI_FORBIDDEN_KEYS = {"test_credentials", "reviewer_instructions", "clientSecret"}
+OPENAI_SAMPLE_PLACEHOLDER = "<FrameOS sample video link>"
+# Review cases use uploads or media FrameOS owns, never a scraped platform link.
+SCRAPED_SOURCE_RE = re.compile(r"youtube\.com|youtu\.be|tiktok\.com|instagram\.com|twitch\.tv|kick\.com", re.I)
+FREE_TRIAL_RE = re.compile(r"\bfree\s+trial\b", re.I)
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico"}
 
 FRONTMATTER_KEYS = {"name", "description", "license"}
@@ -365,6 +409,16 @@ def png_size(path: Path) -> Optional[Tuple[int, int]]:
 
 def is_https(url: Any) -> bool:
     return isinstance(url, str) and url.startswith("https://") and len(url) > len("https://")
+
+
+def contrast_ratio(a: str, b: str) -> float:
+    """WCAG contrast ratio of two #RRGGBB colours (1.0 to 21.0)."""
+    def lum(hex_color: str) -> float:
+        rgb = [int(hex_color[i:i + 2], 16) / 255 for i in (1, 3, 5)]
+        lin = [c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in rgb]
+        return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2]
+    hi, lo = sorted((lum(a), lum(b)), reverse=True)
+    return (hi + 0.05) / (lo + 0.05)
 
 
 def semver_key(v: str) -> Tuple[int, int, int, int]:
@@ -1117,18 +1171,45 @@ def _scope_list(v: Any) -> List[str]:
 
 def check_mcp_configs(ctx: Ctx) -> None:
     r = ctx.report
+    # Root .mcp.json: read by Claude Code (and Devin, VS Code via the Claude format).
+    extra = sorted(set(ctx.manifests.get(".mcp.json") or {}) - {"mcpServers"})
+    if extra:
+        r.error(".mcp.json", f"only mcpServers is allowed at the top level, found {extra}")
     s = _servers(ctx, ".mcp.json")
     if s is not None:
         if s.get("type") != "http":
             r.error(".mcp.json", f"mcpServers.frameos.type must be 'http' (Claude Code drops url-only servers), found {s.get('type')!r}")
         if s.get("url") != MCP_URL:
             r.error(".mcp.json", f"mcpServers.frameos.url must be {MCP_URL}, found {s.get('url')!r}")
+        extra = sorted(set(s) - CLAUDE_HTTP_KEYS)
+        if extra:
+            r.error(".mcp.json", f"mcpServers.frameos has keys not in Claude Code's MCP schema: {extra} (Codex keys go in .codex-plugin/mcp.json)")
+        oauth = s.get("oauth")
+        if not isinstance(oauth, dict):
+            r.error(".mcp.json", "mcpServers.frameos.oauth must be an object with scopes")
+        else:
+            extra = sorted(set(oauth) - CLAUDE_OAUTH_KEYS)
+            if extra:
+                r.error(".mcp.json", f"mcpServers.frameos.oauth has keys not in Claude Code's MCP schema: {extra}")
+            if "clientId" in oauth:
+                r.error(".mcp.json", "mcpServers.frameos.oauth.clientId would replace Claude's pre-registered CIMD client; leave it out")
+            if not isinstance(oauth.get("scopes"), str):
+                r.error(".mcp.json", "mcpServers.frameos.oauth.scopes must be one space-separated string")
+            elif OAUTH_SCOPE not in _scope_list(oauth["scopes"]):
+                r.error(".mcp.json", f"mcpServers.frameos.oauth.scopes must include {OAUTH_SCOPE}")
+    # Codex's own connection file, named by .codex-plugin/plugin.json.
+    s = _servers(ctx, ".codex-plugin/mcp.json")
+    if s is not None:
+        if s.get("type") != "http":
+            r.error(".codex-plugin/mcp.json", f"mcpServers.frameos.type must be 'http', found {s.get('type')!r}")
+        if s.get("url") != MCP_URL:
+            r.error(".codex-plugin/mcp.json", f"mcpServers.frameos.url must be {MCP_URL}, found {s.get('url')!r}")
         if s.get("oauth_resource") != s.get("url"):
-            r.error(".mcp.json", f"mcpServers.frameos.oauth_resource must equal url ({MCP_URL}), found {s.get('oauth_resource')!r}")
-        if OAUTH_SCOPE not in _scope_list((s.get("oauth") or {}).get("scopes")):
-            r.error(".mcp.json", f"mcpServers.frameos.oauth.scopes must include {OAUTH_SCOPE}")
+            r.error(".codex-plugin/mcp.json", f"mcpServers.frameos.oauth_resource must equal url ({MCP_URL}), found {s.get('oauth_resource')!r}")
         if OAUTH_SCOPE not in _scope_list(s.get("scopes")):
-            r.error(".mcp.json", f"mcpServers.frameos.scopes must include {OAUTH_SCOPE}")
+            r.error(".codex-plugin/mcp.json", f"mcpServers.frameos.scopes must include {OAUTH_SCOPE}")
+        if "headers" in s:
+            r.error(".codex-plugin/mcp.json", "Codex ignores 'headers'; use http_headers")
     s = _servers(ctx, ".cursor-plugin/plugin.json")
     if s is not None:
         if s.get("url") != MCP_URL:
@@ -1219,7 +1300,13 @@ def check_codex(ctx: Ctx) -> None:
         p = root / v
         if (kind == "dir" and not p.is_dir()) or (kind == "file" and not p.is_file()):
             r.error(name, f"{key} {v!r} does not exist")
-    itf = data.get("interface")
+    if data.get("mcpServers") != CODEX_MCP_FILE:
+        r.error(name, f"mcpServers must be {CODEX_MCP_FILE!r}; the root .mcp.json is Claude-only")
+    _check_codex_interface(r, name, data.get("interface"), root)
+
+
+def _check_codex_interface(r: Report, name: str, itf: Any, root: Path) -> None:
+    """The Codex/OpenAI listing fields, at the limits OpenAI's final submission applies."""
     if not isinstance(itf, dict):
         r.error(name, "interface object is required")
         return
@@ -1256,10 +1343,15 @@ def check_codex(ctx: Ctx) -> None:
                     r.error(name, f"interface.defaultPrompt[{i}] must not contain @mentions")
             if len(set(map(str, prompts))) != len(prompts):
                 r.error(name, "interface.defaultPrompt entries must be unique")
-    for key in ("brandColor", "brandColorDark"):
+    for key, background in (("brandColor", "#FFFFFF"), ("brandColorDark", "#212121")):
         v = itf.get(key)
-        if v is not None and not (isinstance(v, str) and re.fullmatch(r"#[0-9A-Fa-f]{6}", v)):
+        if v is None:
+            continue
+        if not (isinstance(v, str) and re.fullmatch(r"#[0-9A-Fa-f]{6}", v)):
             r.error(name, f"interface.{key} must be #RRGGBB")
+        elif contrast_ratio(v, background) < 2:
+            # OpenAI's portal: light colour vs white, dark-theme colour vs #212121.
+            r.error(name, f"interface.{key} {v} has {contrast_ratio(v, background):.2f}:1 contrast against {background}; OpenAI needs at least 2:1")
     for key in ("composerIcon", "logo", "composerIconDark", "logoDark"):
         v = itf.get(key)
         if v is None:
@@ -1276,6 +1368,207 @@ def check_codex(ctx: Ctx) -> None:
             r.error(name, f"interface.{key} is larger than 5 MiB")
     if itf.get("screenshots"):
         r.warn(name, "interface.screenshots are only allowed when the MCP server returns UI")
+
+
+def merge_openai_manifest(codex: Dict[str, Any], package: Dict[str, Any], version: str) -> Tuple[Dict[str, Any], List[str]]:
+    """Return the OpenAI ZIP's .codex-plugin/plugin.json and the owner TODOs still open.
+
+    It starts from the repo's Codex manifest, points mcpServers at the root
+    .mcp.json (the only path the OpenAI portal accepts), applies the package's
+    interface overrides and adds its extensions["com.openai"] block, with
+    {version} and {sample_video_url} filled in.
+    """
+    fill = package.get("fill_before_upload") or {}
+    sample = fill.get("sample_video_url") or ""
+    demo = fill.get("demo_recording_url") or ""
+    todos = []
+    if not sample:
+        todos.append(f"fill_before_upload.sample_video_url is empty, so a test case still reads {OPENAI_SAMPLE_PLACEHOLDER!r}. "
+                     "Add a public https link to a short video FrameOS owns.")
+    if not demo:
+        todos.append("fill_before_upload.demo_recording_url is empty. OpenAI needs a walkthrough video before Submit for review; "
+                     "add its link here or in the portal's Review details.")
+
+    def fill_in(value: Any) -> Any:
+        if isinstance(value, str):
+            return value.replace("{version}", version).replace("{sample_video_url}", sample or OPENAI_SAMPLE_PLACEHOLDER)
+        if isinstance(value, list):
+            return [fill_in(v) for v in value]
+        if isinstance(value, dict):
+            return {k: fill_in(v) for k, v in value.items()}
+        return value
+
+    manifest = json.loads(json.dumps(codex))
+    manifest["mcpServers"] = "./.mcp.json"
+    manifest["interface"] = {**(manifest.get("interface") or {}), **(package.get("interface") or {})}
+    openai = fill_in((package.get("extensions") or {}).get("com.openai") or {})
+    if demo:
+        openai.setdefault("review", {})["demo_recording_url"] = demo
+    manifest["extensions"] = {"com.openai": openai}
+    return manifest, todos
+
+
+def _check_test_case(r: Report, where: str, case: Any, positive: bool, tools: Set[str]) -> None:
+    if not isinstance(case, dict):
+        r.error(OPENAI_PACKAGE, f"{where} must be an object")
+        return
+    extra = sorted(set(case) - OPENAI_CASE_KEYS)
+    if extra:
+        r.error(OPENAI_PACKAGE, f"{where} has keys OpenAI does not read: {extra}")
+    required = ("description", "prompt", "tools_triggered", "expected_behavior") if positive else ("description", "prompt")
+    for key in required:
+        if not isinstance(case.get(key), str) or not case[key].strip():
+            r.error(OPENAI_PACKAGE, f"{where}.{key} is required")
+    if isinstance(case.get("description"), str) and len(case["description"]) > 4000:
+        r.error(OPENAI_PACKAGE, f"{where}.description is over 4,000 characters")
+    if isinstance(case.get("prompt"), str) and "\n" in case["prompt"]:
+        r.error(OPENAI_PACKAGE, f"{where}.prompt must be one line")
+    named = [t.strip() for t in str(case.get("tools_triggered") or "").split(",") if t.strip()]
+    unknown = [t for t in named if tools and t not in tools]
+    if unknown:
+        r.error(OPENAI_PACKAGE, f"{where}.tools_triggered names tools the connector doesn't have: {unknown}")
+
+
+def check_openai_package(ctx: Ctx) -> None:
+    """docs/submission/openai-package.json: what the OpenAI ZIP adds to the Codex manifest."""
+    r, root, name = ctx.report, ctx.root, OPENAI_PACKAGE
+    data = ctx.manifests.get(name)
+    if data is None:
+        return
+    extra = sorted(set(data) - OPENAI_PACKAGE_KEYS)
+    if extra:
+        r.error(name, f"unknown top-level keys: {extra}")
+    for where, key in ((w, k) for w, k in _iter_keys(data) if k in OPENAI_FORBIDDEN_KEYS):
+        r.error(name, f"{where}: the ZIP import rejects {key!r}; reviewer access goes in the portal only")
+    fill = data.get("fill_before_upload") or {}
+    if not isinstance(fill, dict) or set(fill) - OPENAI_FILL_KEYS:
+        r.error(name, f"fill_before_upload may hold only {sorted(OPENAI_FILL_KEYS)}")
+    else:
+        for key in ("sample_video_url", "demo_recording_url"):
+            v = fill.get(key, "")
+            if v and not is_https(v):
+                r.error(name, f"fill_before_upload.{key} must be empty or an https URL")
+        if SCRAPED_SOURCE_RE.search(fill.get("sample_video_url") or ""):
+            r.error(name, "fill_before_upload.sample_video_url must be media FrameOS owns, not a platform link")
+    itf = data.get("interface") or {}
+    if not isinstance(itf, dict):
+        r.error(name, "interface must be an object of listing overrides")
+        itf = {}
+    allowed = set(CODEX_INTERFACE_REQUIRED) | {"brandColor", "brandColorDark", "composerIconDark", "logoDark", "screenshots"}
+    if set(itf) - allowed:
+        r.error(name, f"interface overrides keys the listing doesn't have: {sorted(set(itf) - allowed)}")
+    ext = data.get("extensions")
+    openai = ext.get("com.openai") if isinstance(ext, dict) and list(ext) == ["com.openai"] else None
+    if not isinstance(openai, dict):
+        r.error(name, 'extensions must hold exactly one object, "com.openai"')
+        return
+    if set(openai) - OPENAI_EXTENSION_KEYS:
+        r.error(name, f'extensions["com.openai"] has unknown keys: {sorted(set(openai) - OPENAI_EXTENSION_KEYS)}')
+    skill = openai.get("onboardingSkill")
+    if skill is not None and not (isinstance(skill, str) and re.fullmatch(r"\./skills/[a-z0-9-]+/SKILL\.md", skill)
+                                  and (root / skill).is_file()):
+        r.error(name, f"onboardingSkill {skill!r} must be ./skills/<name>/SKILL.md of an included skill")
+    review = openai.get("review") or {}
+    if set(review) - OPENAI_REVIEW_KEYS:
+        r.error(name, f"review has unknown keys: {sorted(set(review) - OPENAI_REVIEW_KEYS)}")
+    if "demo_recording_url" in review:
+        r.error(name, "set the demo link in fill_before_upload.demo_recording_url, not in review")
+    cases = review.get("test_cases") or {}
+    for kind, want in (("positive", 5), ("negative", 3)):
+        items = cases.get(kind) if isinstance(cases, dict) else None
+        if not isinstance(items, list) or len(items) != want:
+            r.error(name, f"review.test_cases.{kind} needs exactly {want} cases (OpenAI's first MCP review)")
+            continue
+        for i, case in enumerate(items):
+            _check_test_case(r, f"review.test_cases.{kind}[{i}]", case, kind == "positive", ctx.tools)
+    for where, value in _iter_strings(cases):
+        if SCRAPED_SOURCE_RE.search(value):
+            r.error(name, f"review.test_cases.{where} links a platform video; use an upload or media FrameOS owns")
+    if not isinstance(review.get("commerce"), bool):
+        r.error(name, "review.commerce must be true or false")
+    elif not review["commerce"] and not str(review.get("commerce_description") or "").strip():
+        r.error(name, "review.commerce_description should say why FrameOS sells nothing in the plugin")
+    pub = openai.get("publication") or {}
+    if set(pub) - OPENAI_PUBLICATION_KEYS:
+        r.error(name, f"publication has unknown keys: {sorted(set(pub) - OPENAI_PUBLICATION_KEYS)}")
+    if not isinstance(pub.get("release_notes"), str) or not pub["release_notes"].strip():
+        r.error(name, "publication.release_notes is required for the MCP review")
+    countries = pub.get("countries")
+    if countries is not None and not (isinstance(countries, list) and all(isinstance(c, str) and re.fullmatch(r"[A-Z]{2}", c) for c in countries)):
+        r.error(name, "publication.countries must be a list of two-letter uppercase country codes")
+    # Listing and review text: no prices, offers or trial wording anywhere.
+    for where, value in _iter_strings({"interface": itf, "extensions": ext}):
+        if PRICE_RE.search(value) or DISCOUNT_CODE_RE.search(value) or FREE_TRIAL_RE.search(value):
+            r.error(name, f"{where} quotes a price, code or trial; OpenAI listing text may not advertise pricing")
+    # The merged listing must pass the same rules as the repo's Codex manifest.
+    codex = ctx.manifests.get(".codex-plugin/plugin.json")
+    if isinstance(codex, dict):
+        merged, _ = merge_openai_manifest(codex, data, ctx.version or "0.0.0")
+        _check_codex_interface(r, f"{name} (merged OpenAI listing)", merged.get("interface"), root)
+
+
+def _iter_keys(obj: Any, prefix: str = "") -> Iterator[Tuple[str, str]]:
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            where = f"{prefix}.{k}" if prefix else k
+            yield where, k
+            yield from _iter_keys(v, where)
+    elif isinstance(obj, list):
+        for i, v in enumerate(obj):
+            yield from _iter_keys(v, f"{prefix}[{i}]")
+
+
+def check_registry(ctx: Ctx) -> None:
+    """server.json, the Official MCP Registry listing of the hosted connector."""
+    r, name = ctx.report, "server.json"
+    data = ctx.manifests.get(name)
+    if data is None:
+        return
+    extra = sorted(set(data) - REGISTRY_KEYS)
+    if extra:
+        r.error(name, f"keys not in the MCP Registry server schema: {extra}")
+    if data.get("$schema") != REGISTRY_SCHEMA:
+        r.error(name, f"$schema must be {REGISTRY_SCHEMA}")
+    if data.get("name") != REGISTRY_NAME:
+        r.error(name, f"name must be {REGISTRY_NAME!r} (the namespace proven on frameos.studio), found {data.get('name')!r}")
+    for key, limit in (("description", 100), ("title", 100)):
+        v = data.get(key)
+        if v is None and key == "title":
+            continue
+        if not isinstance(v, str) or not 1 <= len(v) <= limit:
+            r.error(name, f"{key} must be a string of 1 to {limit} characters (has {len(v) if isinstance(v, str) else type(v).__name__})")
+    # The listing's version is its own (each publish needs a new one); it is not VERSION.
+    version = data.get("version")
+    if not isinstance(version, str) or not SEMVER_RE.match(version):
+        r.error(name, f"version must be a semantic version (ranges are rejected), found {version!r}")
+    if "websiteUrl" in data and not is_https(data["websiteUrl"]):
+        r.error(name, "websiteUrl must be an https URL")
+    repo = data.get("repository")
+    if repo is not None:
+        if not isinstance(repo, dict) or repo.get("url") != REPO_URL or repo.get("source") != "github":
+            r.error(name, f"repository must be {{url: {REPO_URL}, source: github, id}}")
+        elif not (isinstance(repo.get("id"), str) and repo["id"].isdigit()):
+            r.error(name, "repository.id must be the GitHub repo ID as a string (gh api repos/theSatvik/frameos-plugins --jq .id)")
+    for i, icon in enumerate(data.get("icons") or []):
+        if not isinstance(icon, dict) or not is_https(icon.get("src")):
+            r.error(name, f"icons[{i}].src must be an https URL")
+            continue
+        if icon.get("mimeType") is not None and icon["mimeType"] not in ICON_MIME_TYPES:
+            r.error(name, f"icons[{i}].mimeType {icon['mimeType']!r} is not one of {sorted(ICON_MIME_TYPES)}")
+        for size in icon.get("sizes") or []:
+            if not (isinstance(size, str) and re.fullmatch(r"\d+x\d+|any", size)):
+                r.error(name, f"icons[{i}].sizes entry {size!r} must be WxH or 'any'")
+    remotes = data.get("remotes")
+    if not isinstance(remotes, list) or len(remotes) != 1 or not isinstance(remotes[0], dict):
+        r.error(name, "remotes must hold exactly one entry, the hosted connector")
+    else:
+        remote = remotes[0]
+        if remote.get("type") != "streamable-http" or remote.get("url") != MCP_URL:
+            r.error(name, f"remotes[0] must be {{type: streamable-http, url: {MCP_URL}}}")
+        if remote.get("headers"):
+            r.error(name, "remotes[0].headers must be empty; the connector signs in with OAuth")
+    if data.get("packages"):
+        r.error(name, "packages must be empty; FrameOS is a hosted (remote) server")
 
 
 def check_icon(ctx: Ctx) -> None:
@@ -1771,6 +2064,8 @@ CHECKS = (
     check_agent_plugin,
     check_cursor,
     check_codex,
+    check_openai_package,
+    check_registry,
     check_icon,
     check_gemini,
     check_skills,

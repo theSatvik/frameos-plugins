@@ -7,7 +7,7 @@
 | [C. Cursor Marketplace](#c-cursor-marketplace) | The eight skills and the connector, once FrameOS is listed |
 | [D. Edit mcp.json by hand](#d-edit-mcpjson-by-hand) | The FrameOS connector |
 
-> **Coming soon: Cursor can't sign in to FrameOS yet.** The FrameOS connector is live as of 2026-10-05, but its sign-in server only admits pre-registered apps for now, and so far only Claude Code is pre-registered ([status](../status.md)). None of these routes has been tested in Cursor yet. Steps come from Cursor's documentation.
+> **Tested on 2026-10-08 with route A:** the one-click link signed in with FrameOS's public Cursor client and answered a FrameOS question in Agent chat ([status](../status.md)). Routes B, C and D are not tested yet. Steps come from Cursor's documentation.
 
 ## Requirements
 

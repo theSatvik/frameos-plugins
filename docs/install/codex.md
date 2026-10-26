@@ -2,7 +2,7 @@
 
 You get the eight FrameOS skills plus the FrameOS connector in the Codex CLI.
 
-> **Coming soon: Codex can't sign in to FrameOS yet.** The FrameOS connector is live as of 2026-10-05, but its sign-in server only admits pre-registered apps for now, and so far only Claude Code is pre-registered ([status](../status.md)). Installing works today (checked locally with codex-cli 0.152.0, in an isolated `CODEX_HOME`); `codex mcp login frameos` won't succeed until Codex is enabled.
+> **Tested on 2026-10-08:** Codex signs in to FrameOS through its pre-registered client, and `whoami` returned a real account ([status](../status.md)). The plugin install below was checked with codex-cli 0.152.0 in an isolated `CODEX_HOME`.
 
 ## Requirements
 

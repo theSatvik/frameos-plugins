@@ -5,7 +5,8 @@
         "destructiveHint": false,
         "idempotentHint": false,
         "openWorldHint": true,
-        "readOnlyHint": false
+        "readOnlyHint": false,
+        "title": "Submit Video"
       },
       "description": "Submit a video URL for AI clipping. Starts a credit-consuming render job and returns its job ID. focus_prompt is an optional steer; only its first 400 characters are used.",
       "inputSchema": {
@@ -56,8 +57,10 @@
     {
       "annotations": {
         "destructiveHint": false,
+        "idempotentHint": true,
         "openWorldHint": false,
-        "readOnlyHint": true
+        "readOnlyHint": true,
+        "title": "List Projects"
       },
       "description": "List clipping projects owned by the connected FrameOS account.",
       "inputSchema": {
@@ -99,8 +102,10 @@
     {
       "annotations": {
         "destructiveHint": false,
+        "idempotentHint": true,
         "openWorldHint": false,
-        "readOnlyHint": true
+        "readOnlyHint": true,
+        "title": "Get Project"
       },
       "description": "Get the status and summary of one FrameOS clipping project.",
       "inputSchema": {
@@ -122,8 +127,10 @@
     {
       "annotations": {
         "destructiveHint": false,
+        "idempotentHint": true,
         "openWorldHint": false,
-        "readOnlyHint": true
+        "readOnlyHint": true,
+        "title": "Get Job"
       },
       "description": "Check render progress using the job ID returned by submit_video.",
       "inputSchema": {
@@ -145,8 +152,10 @@
     {
       "annotations": {
         "destructiveHint": false,
+        "idempotentHint": true,
         "openWorldHint": false,
-        "readOnlyHint": true
+        "readOnlyHint": true,
+        "title": "List Clips"
       },
       "description": "List project clips. If exportRequired is true, call export_clip for the captioned download.",
       "inputSchema": {
@@ -185,8 +194,10 @@
     {
       "annotations": {
         "destructiveHint": false,
+        "idempotentHint": true,
         "openWorldHint": false,
-        "readOnlyHint": true
+        "readOnlyHint": true,
+        "title": "Whoami"
       },
       "description": "Identify the connected FrameOS user, workspace, plan, and credit balance.",
       "inputSchema": {
@@ -200,8 +211,10 @@
     {
       "annotations": {
         "destructiveHint": false,
+        "idempotentHint": true,
         "openWorldHint": false,
-        "readOnlyHint": true
+        "readOnlyHint": true,
+        "title": "Get Usage"
       },
       "description": "Read the workspace's recent credit usage and current credit balance.",
       "inputSchema": {
@@ -215,8 +228,10 @@
     {
       "annotations": {
         "destructiveHint": false,
+        "idempotentHint": true,
         "openWorldHint": false,
-        "readOnlyHint": true
+        "readOnlyHint": true,
+        "title": "Describe Clip"
       },
       "description": "Read one clip's title, score, transcript, aspect, preview, and export requirement.",
       "inputSchema": {
@@ -238,8 +253,10 @@
     {
       "annotations": {
         "destructiveHint": false,
+        "idempotentHint": true,
         "openWorldHint": false,
-        "readOnlyHint": true
+        "readOnlyHint": true,
+        "title": "Get Transcript"
       },
       "description": "Read a page or time range of the full source-video transcript. start_ms and end_ms are in milliseconds; the returned segments' start and end are in seconds. New renders store this artifact; older projects may lack it.",
       "inputSchema": {
@@ -293,10 +310,12 @@
     {
       "annotations": {
         "destructiveHint": false,
+        "idempotentHint": true,
         "openWorldHint": false,
-        "readOnlyHint": true
+        "readOnlyHint": true,
+        "title": "Get Brand"
       },
-      "description": "Read the connected workspace's current brand settings; FrameOS has one brand kit, not a template library.",
+      "description": "Read the workspace's default brand template: its logo (corner, size, opacity) and caption default. The FrameOS web app can save several brand templates, each with its own format and content type; videos submitted here render with the default one, or with no template when none is set as the default (then the brand is empty).",
       "inputSchema": {
         "properties": {},
         "type": "object",
@@ -310,7 +329,8 @@
         "destructiveHint": false,
         "idempotentHint": false,
         "openWorldHint": false,
-        "readOnlyHint": false
+        "readOnlyHint": false,
+        "title": "Export Clip"
       },
       "description": "Get a captioned MP4 download. May start an export job; poll get_job, then call again for its URL. A call while that job is still running returns the same job.",
       "inputSchema": {
@@ -358,7 +378,8 @@
         "destructiveHint": false,
         "idempotentHint": false,
         "openWorldHint": false,
-        "readOnlyHint": false
+        "readOnlyHint": false,
+        "title": "Duplicate Clip"
       },
       "description": "Create a separate clip record using the same rendered media, without charging or re-rendering.",
       "inputSchema": {
@@ -380,8 +401,10 @@
     {
       "annotations": {
         "destructiveHint": false,
+        "idempotentHint": true,
         "openWorldHint": false,
-        "readOnlyHint": true
+        "readOnlyHint": true,
+        "title": "List Collections"
       },
       "description": "List clip collections in the connected FrameOS workspace.",
       "inputSchema": {
@@ -414,7 +437,8 @@
         "destructiveHint": false,
         "idempotentHint": false,
         "openWorldHint": false,
-        "readOnlyHint": false
+        "readOnlyHint": false,
+        "title": "Create Collection"
       },
       "description": "Create a named workspace collection for organizing clips.",
       "inputSchema": {
@@ -438,7 +462,8 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": false,
-        "readOnlyHint": false
+        "readOnlyHint": false,
+        "title": "Add Clip To Collection"
       },
       "description": "Add an owned clip to an owned collection; repeated calls do not create duplicates.",
       "inputSchema": {
@@ -465,8 +490,10 @@
     {
       "annotations": {
         "destructiveHint": false,
+        "idempotentHint": true,
         "openWorldHint": false,
-        "readOnlyHint": true
+        "readOnlyHint": true,
+        "title": "List Clips In Collection"
       },
       "description": "List clips in a workspace collection with fresh preview URLs.",
       "inputSchema": {
@@ -507,7 +534,8 @@
         "destructiveHint": false,
         "idempotentHint": false,
         "openWorldHint": false,
-        "readOnlyHint": false
+        "readOnlyHint": false,
+        "title": "Export Collection"
       },
       "description": "Get captioned export URLs or export job IDs for up to 50 clips in a collection. Each call keeps at most 10 clips rendering; clips with status not_started need another call once those finish. A clip already rendering returns its running job.",
       "inputSchema": {
@@ -531,7 +559,8 @@
         "destructiveHint": false,
         "idempotentHint": false,
         "openWorldHint": false,
-        "readOnlyHint": false
+        "readOnlyHint": false,
+        "title": "Create Upload Link"
       },
       "description": "Get a one-hour signed PUT URL for a video file; upload bytes, then call submit_uploaded_video.",
       "inputSchema": {
@@ -560,7 +589,8 @@
         "destructiveHint": false,
         "idempotentHint": false,
         "openWorldHint": false,
-        "readOnlyHint": false
+        "readOnlyHint": false,
+        "title": "Submit Uploaded Video"
       },
       "description": "Start clipping an uploaded file using the gs_path from create_upload_link. Consumes credits. focus_prompt is an optional steer; only its first 400 characters are used.",
       "inputSchema": {
@@ -610,10 +640,11 @@
     },
     {
       "annotations": {
-        "destructiveHint": false,
+        "destructiveHint": true,
         "idempotentHint": false,
         "openWorldHint": false,
-        "readOnlyHint": false
+        "readOnlyHint": false,
+        "title": "Set Caption Style"
       },
       "description": "Change the saved overlay caption style and optional appearance; export uses the new look.",
       "inputSchema": {
@@ -652,10 +683,11 @@
     },
     {
       "annotations": {
-        "destructiveHint": false,
+        "destructiveHint": true,
         "idempotentHint": false,
         "openWorldHint": false,
-        "readOnlyHint": false
+        "readOnlyHint": false,
+        "title": "Recaption Clip"
       },
       "description": "Re-render captions on an older burned-caption clip; returns a job to poll.",
       "inputSchema": {
@@ -697,7 +729,8 @@
         "destructiveHint": false,
         "idempotentHint": false,
         "openWorldHint": true,
-        "readOnlyHint": false
+        "readOnlyHint": false,
+        "title": "Create Thumbnail Job"
       },
       "description": "Generate 1 to 3 thumbnails (max_thumbnails, default 3; a larger number makes 3) from one source: clip_id, video_id, or a public http(s) video url. Use clip_id or video_id for media already in FrameOS; gs:// paths and local files are rejected. style_ref is an optional public http(s) link to an image whose look to match. Costs FrameOS credits; returns a job ID.",
       "inputSchema": {
@@ -769,8 +802,10 @@
     {
       "annotations": {
         "destructiveHint": false,
+        "idempotentHint": true,
         "openWorldHint": false,
-        "readOnlyHint": true
+        "readOnlyHint": true,
+        "title": "Get Thumbnail Job"
       },
       "description": "Check a thumbnail job's progress and result images.",
       "inputSchema": {
@@ -792,8 +827,10 @@
     {
       "annotations": {
         "destructiveHint": false,
+        "idempotentHint": true,
         "openWorldHint": false,
-        "readOnlyHint": true
+        "readOnlyHint": true,
+        "title": "List Thumbnails"
       },
       "description": "List generated thumbnails in the connected workspace.",
       "inputSchema": {
@@ -830,8 +867,10 @@
     {
       "annotations": {
         "destructiveHint": false,
+        "idempotentHint": true,
         "openWorldHint": false,
-        "readOnlyHint": true
+        "readOnlyHint": true,
+        "title": "List Social Accounts"
       },
       "description": "List social publishing accounts already connected to the FrameOS workspace.",
       "inputSchema": {
@@ -862,9 +901,10 @@
     {
       "annotations": {
         "destructiveHint": false,
-        "idempotentHint": false,
+        "idempotentHint": true,
         "openWorldHint": false,
-        "readOnlyHint": false
+        "readOnlyHint": true,
+        "title": "Generate Social Copy"
       },
       "description": "Draft title, caption, and hashtags from a clip transcript using the configured model; does not post or charge credits.",
       "inputSchema": {
@@ -906,7 +946,8 @@
         "destructiveHint": true,
         "idempotentHint": false,
         "openWorldHint": true,
-        "readOnlyHint": false
+        "readOnlyHint": false,
+        "title": "Post Clip"
       },
       "description": "Start publishing a clip to a connected social account. Returns a job ID: poll get_job, and when it completes its message is the public post URL. privacy is honoured on YouTube only: on Facebook, private uploads the video unpublished and unlisted posts it publicly; Instagram and LinkedIn posts are always public. A blank title uses the clip's own title. Call only when the user explicitly asks to publish.",
       "inputSchema": {

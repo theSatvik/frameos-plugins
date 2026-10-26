@@ -1,0 +1,28 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "studio.frameos/frameos",
+  "title": "FrameOS",
+  "description": "Turn long videos into captioned, reframed short clips, thumbnails, and social posts.",
+  "version": "1.0.0",
+  "websiteUrl": "https://frameos.studio/plugin",
+  "repository": {
+    "url": "https://github.com/theSatvik/frameos-plugins",
+    "source": "github",
+    "id": "1400829488"
+  },
+  "icons": [
+    {
+      "src": "https://frameos.studio/frameos/frameos-favicon.png",
+      "mimeType": "image/png",
+      "sizes": [
+        "256x256"
+      ]
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://frameos.studio/mcp"
+    }
+  ]
+}

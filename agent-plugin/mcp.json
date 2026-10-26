@@ -5,7 +5,7 @@
       "type": "streamable-http",
       "url": "https://frameos.studio/mcp",
       "headers": {
-        "X-FrameOS-Plugin-Version": "0.1.0"
+        "X-FrameOS-Plugin-Version": "0.1.1"
       }
     }
   }

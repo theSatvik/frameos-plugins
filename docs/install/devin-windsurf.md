@@ -1,79 +1,10 @@
 # Install FrameOS in Devin and Windsurf
 
-Windsurf became **Devin Desktop** on 2 June 2026. Its default agent, Devin Local, uses the Devin CLI's plugins and MCP settings, so the steps below cover Devin Desktop and the Devin CLI. The older Cascade agent is covered at the end.
+> **Coming soon.** FrameOS isn't available in Devin yet. The Devin CLI, Devin Desktop (Windsurf became Devin Desktop on 2 June 2026) and the Devin web app at app.devin.ai can't sign in to FrameOS today, because FrameOS's sign-in service doesn't recognise them yet ([status](../status.md)).
 
-> **Coming soon: Devin and Windsurf can't sign in to FrameOS yet.** The FrameOS connector is live as of 2026-10-05, but its sign-in server only admits pre-registered apps for now, and so far only Claude Code is pre-registered ([status](../status.md)). None of these steps has been tested in Devin or Windsurf yet. Steps come from Devin's documentation.
+Until then:
 
-## Requirements
+- **Use FrameOS from another app**, such as Claude Code, Codex, Cursor or VS Code. Every guide is listed in the [README](../../README.md#install). You can also use the FrameOS web app at https://frameos.studio/dashboard.
+- **Want to know when Devin works?** Email support@frameos.studio and we'll tell you as soon as it does.
 
-- Devin Desktop or the Devin CLI.
-- A FrameOS account. Signing in for the first time creates your workspace.
-
-## Install the plugin
-
-```bash
-devin plugins install theSatvik/frameos-plugins
-```
-
-Devin looks for `.devin-plugin/plugin.json` first, then `.claude-plugin/plugin.json`, then an Agent Plugins `plugin.json`. This repo has no `.devin-plugin/`, so Devin uses the Claude-format plugin at the repo root (skills plus `.mcp.json`). To use the Agent Plugins package instead:
-
-```bash
-devin plugins install theSatvik/frameos-plugins#agent-plugin
-```
-
-## Connector only
-
-```bash
-devin mcp add -s user frameos https://frameos.studio/mcp
-```
-
-Or edit the config yourself: `~/.config/devin/mcp_config.json` (Windows: `%APPDATA%\devin\mcp_config.json`) for all projects, or `.devin/mcp_config.json` for one project:
-
-```json
-{
-  "mcpServers": {
-    "frameos": { "url": "https://frameos.studio/mcp", "transport": "http" }
-  }
-}
-```
-
-## Sign in
-
-```bash
-devin mcp login frameos
-```
-
-This opens your browser. Devin registers itself with Dynamic Client Registration when no client ID is configured, which FrameOS's sign-in server does not offer yet ([status](../status.md#prerequisites-before-every-host-can-connect)).
-
-## Check it works
-
-Ask Devin:
-
-```text
-What is my FrameOS credit balance?
-```
-
-You should see your workspace name and a credit number.
-
-## Sign in again
-
-Run `devin mcp login frameos` again.
-
-## Legacy Cascade agent
-
-Windsurf's Cascade agent was kept available after the rename, at least through July 2026; whether it is still available is not yet verified. It reads `~/.codeium/windsurf/mcp_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "frameos": { "serverUrl": "https://frameos.studio/mcp" }
-  }
-}
-```
-
-Cascade has no MCP marketplace or one-click install, and allows 100 MCP tools in total across servers (FrameOS has 27).
-
-## Known limitations
-
-- FrameOS is not listed in Devin's plugin marketplace yet.
-- Devin can upload a local video file for you, because it can run commands.
+Windsurf's old Cascade agent was removed from Devin Desktop on 8 September 2026. It couldn't sign in to FrameOS either.

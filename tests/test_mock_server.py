@@ -106,6 +106,10 @@ class SchemaParityTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.instructions, SNAPSHOT["initialize"]["instructions"])
         self.assertEqual(self.server_info.name, SNAPSHOT["initialize"]["serverInfo"]["name"])
         self.assertEqual(self.server_info.version, SNAPSHOT["initialize"]["serverInfo"]["version"])
+        # The title stays "FrameOS (mock)" on purpose; the link and icon match the real server.
+        info = self.server_info.model_dump(by_alias=True, exclude_none=True, mode="json")
+        self.assertEqual(info.get("websiteUrl"), SNAPSHOT["initialize"]["serverInfo"]["websiteUrl"])
+        self.assertEqual(info.get("icons"), SNAPSHOT["initialize"]["serverInfo"]["icons"])
 
 
 @unittest.skipIf(mock is None, SKIP_REASON)
@@ -216,7 +220,7 @@ class FlowTest(unittest.IsolatedAsyncioTestCase):
             self.assertEqual((await self.call(client, "whoami"))["account"]["credits"], 0)
             text = await self.error(client, "submit_video", source_url="https://www.youtube.com/watch?v=broke1")
             self.assertIn("FrameOS returned HTTP 402: Out of credits. Upgrade your plan or add credits to keep "
-                          "processing.", text)
+                          "processing. You can add credits or change plans at https://frameos.studio/pricing.", text)
             # The row made before the credit check is failed with the reason at once
             # (mcp_routes._settle_refused_row), not left pending for the 30-minute reaper.
             refused = (await self.call(client, "list_projects"))[0]
@@ -228,6 +232,7 @@ class FlowTest(unittest.IsolatedAsyncioTestCase):
             # Thumbnails need 10 credits each.
             text = await self.error(client, "create_thumbnail_job", url="https://example.com/v.mp4")
             self.assertIn("FrameOS returned HTTP 402: Out of credits. Thumbnails cost 10 credits each", text)
+            self.assertTrue(text.endswith(mock.PRICING_SUFFIX), text)
 
     async def test_real_error_strings(self):
         server, _ = _new_server()

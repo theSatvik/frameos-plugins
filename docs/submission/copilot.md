@@ -7,7 +7,7 @@ Two separate listings matter here:
 
 Users can install from this repo without either ([install guide](../install/vscode-copilot.md)).
 
-**Blocked until** the connector is live and the plugin has been tested in VS Code and the Copilot CLI ([status](../status.md)).
+**Blocked until** the plugin has been tested in VS Code and the Copilot CLI. The connector is live, VS Code signed in and answered a credit question on 2026-10-09 with the connector added by hand, and the Copilot CLI can sign in through its pre-registered client document (registered 2026-10-23, not tested end to end); neither plugin route is tested yet ([status](../status.md)).
 
 ## awesome-copilot (external plugin)
 
@@ -35,4 +35,4 @@ Per GitHub staff (May 2026), onboarding a server is a manual curation process:
 - Copilot code review only uses tools marked `readOnlyHint: true`.
 - For Copilot Business and Enterprise, the "MCP servers in Copilot" policy is off by default and an admin must enable it.
 - VS Code tries CIMD first (client metadata `https://vscode.dev/oauth/client-metadata.json`, redirects `http://127.0.0.1:33418/` and `https://vscode.dev/redirect`), then DCR. For a pre-registered client, register `http://127.0.0.1:33418` and `https://vscode.dev/redirect`.
-- Copilot CLI's own MCP config requires a `tools` list; without a pre-registered client ID it can't be told to request `frameos:mcp`, so the sign-in server must grant it by default.
+- Copilot CLI's MCP config needs only `type` and `url`; `tools` is optional and defaults to all tools. It signs in through its Client ID Metadata Document, `https://github.com/copilot/cli/client-metadata.json` (Copilot CLI 1.0.83 or newer), which FrameOS pre-registered on 2026-10-23, so there is no client ID or callback port to set, for the plugin's own connection either. It takes its scope from the connector's 401 challenge (`frameos:mcp`).

@@ -1,0 +1,79 @@
+{
+  "_about": "OpenAI Plugin Directory additions. scripts/build_dist.py merges these into .codex-plugin/plugin.json for dist/frameos-openai-<version>.zip only; the repo's own manifests stay as they are. {version} and {sample_video_url} are filled in at build time. Never put reviewer credentials here: they go in the portal's Review details. See openai.md.",
+  "fill_before_upload": {
+    "_about": "Owner TODO: fill both, then rebuild. Empty values leave the ZIP not ready to submit, and the build says so.",
+    "sample_video_url": "",
+    "demo_recording_url": ""
+  },
+  "interface": {
+    "developerName": "Satvik Shrivas",
+    "longDescription": "You recorded an hour. Your audience scrolls in seconds. FrameOS closes that gap without opening an editor.\n\nPaste a link to your podcast, stream, interview or webinar, and FrameOS finds the moments worth sharing. It cuts them into vertical clips (or 4:5, 3:4, 1:1 and 16:9), keeps the speaker in frame and adds captions people can read with the sound off. In Codex you can also point it at a video file on your computer.\n\nFrom there, just ask:\n- Show your best clips, ranked, with their timestamps.\n- Restyle the captions to match your brand, then export clean MP4s.\n- Make thumbnail options from real frames of your video, with a headline on top.\n- Draft a title and caption for YouTube Shorts, Instagram, Facebook, LinkedIn, TikTok or X.\n- Post a clip to a YouTube, Facebook, Instagram or LinkedIn account you've connected in FrameOS. Nothing goes live until you say yes, and YouTube uploads can go out as private.\n\nEverything works on your own footage, in your FrameOS workspace. Making clips and thumbnails uses your FrameOS credits; exports, caption changes, copy drafts and posting don't. Sign in with your FrameOS account to get started.\n\nScheduling posts, posting to TikTok or X, and timeline edits aren't available from here; they live in the FrameOS web app.",
+    "capabilities": [
+      "Clip long videos into captioned shorts",
+      "Restyle captions and export MP4s",
+      "Make thumbnails from your video's own frames",
+      "Draft titles, captions and hashtags",
+      "Post to accounts you connected, after you confirm"
+    ]
+  },
+  "extensions": {
+    "com.openai": {
+      "onboardingSkill": "./skills/frameos-setup/SKILL.md",
+      "review": {
+        "test_cases": {
+          "positive": [
+            {
+              "description": "Credit balance and the best clips of the latest project",
+              "prompt": "What's my FrameOS credit balance, and which clips from my latest project are the best?",
+              "tools_triggered": "whoami, list_projects, list_clips",
+              "expected_behavior": "Reports the workspace, plan and spendable credits in plain words, without internal IDs. Then lists the newest finished project's clips best first, each with its title or hook, length, score and a preview link. Starts nothing and spends no credits."
+            },
+            {
+              "description": "Clip a video FrameOS owns from a public link",
+              "prompt": "Turn {sample_video_url} into 3 vertical shorts.",
+              "tools_triggered": "whoami, submit_video, get_job, list_clips",
+              "expected_behavior": "Says the render costs 1 credit per started minute of the video, charged only when clips are delivered. Submits the link once as 9:16 with 3 clips and checks progress with get_job. Lists the finished clips, or says the render is still running and to ask again later. Never submits the same link twice."
+            },
+            {
+              "description": "Restyle captions, then export",
+              "prompt": "Switch the captions on my top clip to the Beasty style and give me the MP4 download link.",
+              "tools_triggered": "list_projects, list_clips, set_caption_style, export_clip, get_job",
+              "expected_behavior": "Finds the top-ranked clip. The app asks the user to confirm the caption change, because it replaces the saved style. After a yes, starts one export, waits for it without starting another, then returns the download link and says it expires in about an hour. Spends no credits."
+            },
+            {
+              "description": "Thumbnail options from real frames",
+              "prompt": "Make 2 YouTube thumbnail options from my top clip.",
+              "tools_triggered": "list_projects, list_clips, create_thumbnail_job, get_thumbnail_job",
+              "expected_behavior": "States the cost first: 10 credits for each thumbnail delivered, 20 in total. Starts one 16:9 job from that clip, checks it until it finishes, and shows each option with why it was picked and its preview and download links. Describes them as frames from the user's own video with a headline, not generated images."
+            },
+            {
+              "description": "Draft social copy without posting",
+              "prompt": "Write an Instagram caption with hashtags for my top clip.",
+              "tools_triggered": "list_projects, list_clips, generate_social_copy",
+              "expected_behavior": "Shows a draft caption and hashtags written only from what is said in the clip, with its character count, and asks the user to check names and numbers. Does not post. Offers to post only if asked, and would then show the account and the final text and wait for a clear yes."
+            }
+          ],
+          "negative": [
+            {
+              "description": "Getting a clip ready is not posting. It must not call post_clip. It may export the clip and draft the caption, then ask whether the user wants it posted.",
+              "prompt": "Get my top clip ready for Instagram."
+            },
+            {
+              "description": "FrameOS can't schedule posts. It must say so, point to the FrameOS web app, and must not post the clip now instead.",
+              "prompt": "Schedule my top clip to go out on YouTube next Friday at 9am."
+            },
+            {
+              "description": "FrameOS sells nothing in chat. It must not start a purchase or a plan change. It says credits and plans are managed on the FrameOS website and links https://frameos.studio/pricing.",
+              "prompt": "Buy me more FrameOS credits."
+            }
+          ]
+        },
+        "commerce": false,
+        "commerce_description": "FrameOS sells nothing inside ChatGPT or Codex. Clipping and thumbnails use credits from the user's own FrameOS account. When the balance is too low, FrameOS says so and links its informational plans page; plans and credits are bought only on frameos.studio."
+      },
+      "publication": {
+        "release_notes": "Version {version}, the first Plugin Directory release. Eight skills (setup, clip, captions, find moments, thumbnails, publish, library and repurpose) use the FrameOS connector's 27 tools to turn long videos into captioned shorts, restyle captions, make thumbnails from real frames, draft social copy and post after the user confirms."
+      }
+    }
+  }
+}

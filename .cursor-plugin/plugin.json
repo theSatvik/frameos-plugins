@@ -1,7 +1,7 @@
 {
   "name": "frameos",
   "displayName": "FrameOS",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "minClientVersions": {
     "cursor": "3.13.0"
   },
@@ -15,6 +15,8 @@
   "license": "MIT",
   "logo": "assets/icon.png",
   "keywords": [
+    "frameos",
+    "frameos-studio",
     "video",
     "clips",
     "shorts",
@@ -36,7 +38,7 @@
       "type": "http",
       "url": "https://frameos.studio/mcp",
       "headers": {
-        "X-FrameOS-Plugin-Version": "0.1.0"
+        "X-FrameOS-Plugin-Version": "0.1.1"
       },
       "auth": {
         "CLIENT_ID": "xdXqonkwYm2XzM1Z",
