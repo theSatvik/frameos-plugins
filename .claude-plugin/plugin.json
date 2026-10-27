@@ -22,5 +22,9 @@
     "podcast",
     "repurposing",
     "mcp"
-  ]
+  ],
+  "documentationUrl": "https://frameos.studio/plugin",
+  "supportUrl": "https://frameos.studio/contact",
+  "privacyPolicyUrl": "https://frameos.studio/privacy",
+  "termsOfServiceUrl": "https://frameos.studio/terms"
 }
