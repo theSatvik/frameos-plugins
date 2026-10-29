@@ -2,7 +2,7 @@
   "_about": "OpenAI Plugin Directory additions. scripts/build_dist.py merges these into .codex-plugin/plugin.json for dist/frameos-openai-<version>.zip only; the repo's own manifests stay as they are. {version} and {sample_video_url} are filled in at build time. Never put reviewer credentials here: they go in the portal's Review details. See openai.md.",
   "fill_before_upload": {
     "_about": "Owner TODO: fill both, then rebuild. Empty values leave the ZIP not ready to submit, and the build says so.",
-    "sample_video_url": "",
+    "sample_video_url": "https://storage.googleapis.com/frameos-learn-9bf5b2bf/samples/frameos-sample-talk.mp4",
     "demo_recording_url": ""
   },
   "interface": {
