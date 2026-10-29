@@ -7,7 +7,7 @@
         "scopes": "frameos:mcp"
       },
       "headers": {
-        "X-FrameOS-Plugin-Version": "0.1.1"
+        "X-FrameOS-Plugin-Version": "0.1.2"
       }
     }
   }

@@ -722,7 +722,7 @@
           "readOnlyHint": false,
           "title": "Recaption Clip"
         },
-        "description": "Re-render captions on an older burned-caption clip; returns a job to poll.",
+        "description": "Change a clip's caption style. An older burned-caption clip is re-rendered: you get a job to poll with get_job. For an overlay clip the style is saved right away and there is no job (job_id is null); export_clip renders it.",
         "inputSchema": {
           "properties": {
             "clip_id": {
@@ -1026,5 +1026,5 @@
       }
     ]
   },
-  "_source": "FrameOS-Backend mcp_server/frameos_mcp/server.py sha256 f7044cef6f67479c362dd01b3aea0a42cdb41f2807fc6c34718765ca89592efc (claude/mcp-directory-ready, uncommitted on a31d32b, 2026-10-23)"
+  "_source": "FrameOS-Backend mcp_server/frameos_mcp/server.py sha256 6d00ecad51775f11f6121992f0015499f74c4313fb24a5b31151e45969f1e70b (main at 79b9967, deployed as snipcut-mcp-00032, captured 2026-10-30)"
 }

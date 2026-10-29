@@ -4,7 +4,13 @@ All notable changes to the FrameOS plugin, skills and extension packages. The fo
 
 ## [Unreleased]
 
-## [0.1.1] - not yet released
+## [0.1.2] - not yet released
+
+### Changed
+
+- `recaption_clip` on an overlay clip now saves the new style straight away and returns `status: completed` with `job_id: null`, instead of a 409 (connector update deployed on 2026-10-28). The tool snapshot, the mock server and its test, and the captions skill follow it.
+
+## [0.1.1] - 2026-10-28
 
 ### Added
 

@@ -11,7 +11,7 @@
       "name": "frameos",
       "source": "./",
       "description": "Turn long videos into captioned short clips with FrameOS: submit a link or upload, track the render, restyle captions, export MP4s, make thumbnails, draft social copy, and post to connected accounts.",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "author": {
         "name": "FrameOS",
         "email": "support@frameos.studio",

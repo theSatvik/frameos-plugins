@@ -80,7 +80,7 @@ This skill owns `set_caption_style`, `recaption_clip` and the caption catalogue 
 
 ### 3b. Older burned-in clips (`captionMode` is `burned`)
 
-1. Call `recaption_clip(clip_id, style, appearance)` with a canonical id from the catalogue. An unknown style is refused with "Unknown caption style". It returns a job and the canonical style it will burn.
+1. Call `recaption_clip(clip_id, style, appearance)` with a canonical id from the catalogue. An unknown style is refused with "Unknown caption style". It returns a job and the canonical style it will burn. If the clip turns out to be an overlay clip, it saves the style right away instead and returns `job_id: null`: skip the polling and go to step 4.
 2. Poll `get_job(job_id)` every 5-10 seconds until `state` is `completed`, `failed` or `cancelled`. It usually finishes within 2 minutes. Stop after about 5 minutes (or 30 checks), tell the user it is still working, and check again when they ask.
 3. On `completed`, call `describe_clip` again: the clip is now an overlay clip with fresh preview links showing the new captions.
 4. Save the same look for downloads and posting: `set_caption_style(clip_id, same style, same appearance)`. The re-caption job does not save appearance tweaks on its own.

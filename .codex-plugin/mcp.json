@@ -8,7 +8,7 @@
       ],
       "oauth_resource": "https://frameos.studio/mcp",
       "http_headers": {
-        "X-FrameOS-Plugin-Version": "0.1.1"
+        "X-FrameOS-Plugin-Version": "0.1.2"
       }
     }
   }

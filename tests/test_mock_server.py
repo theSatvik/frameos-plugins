@@ -320,9 +320,11 @@ class FlowTest(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(after["layout"], {})
 
             _, fresh = await self.submit_and_finish(client)
-            text = await self.error(client, "recaption_clip", clip_id=fresh[0]["id"], style="beasty")
-            self.assertIn("FrameOS returned HTTP 409: This clip uses overlay captions — set the style via PATCH "
-                          "/clips/{id}/captions (instant); burning happens on export.", text)
+            # On an overlay clip recaption_clip saves the style like set_caption_style: no job, no render.
+            instant = await self.call(client, "recaption_clip", clip_id=fresh[0]["id"], style="beasty")
+            self.assertEqual((instant["status"], instant["job_id"], instant["mode"], instant["style"]),
+                             ("completed", None, "overlay", "beasty"))
+            self.assertIn("saved right away; export_clip renders it", instant["message"])
             saved = await self.call(client, "set_caption_style", clip_id=fresh[0]["id"], style="BOUNCE",
                                     appearance={"font": "Anton", "scale": 1.234, "yPct": 0.2, "unknown": 1})
             self.assertEqual(saved, {"clip_id": fresh[0]["id"], "mode": "overlay", "style": "beasty",

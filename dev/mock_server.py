@@ -1480,11 +1480,15 @@ class MockState:
         clip = self._org_clip(clip_id)
         mode, _ = self._caption_meta(clip)
         if mode == "overlay":
-            raise FrameOSHTTPError(
-                409,
-                "This clip uses overlay captions — set the style via PATCH "
-                "/clips/{id}/captions (instant); burning happens on export.",
-            )
+            # The backend's MCP route saves the style the way set_caption_style
+            # does: nothing renders, so there is no job.
+            saved = self.set_caption_style(clip_id, resolved, payload.appearance)
+            return {
+                **saved,
+                "status": "completed",
+                "job_id": None,
+                "message": "This clip uses overlay captions, so the new style was saved right away; export_clip renders it.",
+            }
         head, index = self._media_parts(clip)
         look = _appearance_or_422(payload.appearance)
         job_id = f"recap:{clip_id}:{int(self.now())}"
@@ -2031,7 +2035,7 @@ def create_server(state: Optional[MockState] = None) -> MCPServer:
 
     @server.tool(title="Recaption Clip", annotations=ToolAnnotations(title="Recaption Clip", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False))
     async def recaption_clip(clip_id: str, style: str, appearance: dict | None = None) -> dict:
-        """Re-render captions on an older burned-caption clip; returns a job to poll."""
+        """Change a clip's caption style. An older burned-caption clip is re-rendered: you get a job to poll with get_job. For an overlay clip the style is saved right away and there is no job (job_id is null); export_clip renders it."""
         return _call(state, state.recaption_clip, clip_id, style, appearance)
 
     @server.tool(title="Create Thumbnail Job", annotations=ToolAnnotations(title="Create Thumbnail Job", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=True))
