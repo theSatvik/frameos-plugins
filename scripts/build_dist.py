@@ -85,6 +85,7 @@ OTHER_APPS_LINE = "Steps for every other app are at https://frameos.studio/plugi
 OPENAI_BANNED = (
     ("another AI product's name", re.compile(r"\b(claude|cowork|anthropic)\b", re.I)),
     ("an unfilled placeholder", re.compile(r"__[A-Z][A-Z0-9_]*__")),
+    ("an install from GitHub or npm", re.compile(r"\b(?:npx skills add|plugin marketplace add)\b")),
 )
 
 
@@ -202,6 +203,13 @@ def openai_skill_text(rel_path: str, text: str) -> str:
     """The ChatGPT and Codex copy of one skills/ file (see OPENAI_HOST_SECTIONS)."""
     if rel_path == "skills/frameos-setup/references/hosts.md":
         text = re.sub(r" \(in Claude Code[^)]*\)", "", text)
+        # A directory install comes from OpenAI's own Plugins directory, so this copy
+        # never tells an agent to fetch code from GitHub or npm (OpenAI's skill scan
+        # flags "install or load code from an untrusted or mutable source").
+        text = re.sub(r"(?m)^- Install the plugin:\n(?:  .*\n)+",
+                      "- Install the plugin: open the Plugins directory (`/plugins` in the TUI, or Plugins in the app), "
+                      "search for FrameOS and add it. Plugin skills and tools load in a new session.\n", text)
+        text = re.sub(r"(?m)^- Skills only, for agents that read SKILL\.md folders: .*\n", "", text)
         return _keep_sections(text, OPENAI_HOST_SECTIONS, "This copy covers ChatGPT and Codex. " + OTHER_APPS_LINE)
     if rel_path == "skills/frameos-setup/SKILL.md":
         text = re.sub(r"(?m)^1\. Identify the app: .*$",
