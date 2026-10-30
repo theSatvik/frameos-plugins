@@ -74,12 +74,12 @@ From there, just ask:
 - Draft a title and caption for YouTube Shorts, Instagram, Facebook, LinkedIn, TikTok or X.
 - Post a clip to a YouTube, Facebook, Instagram or LinkedIn account you've connected in FrameOS. Nothing goes live until you say yes, and YouTube uploads can go out as private.
 
-Everything works on your own footage, in your FrameOS workspace. Making clips and thumbnails uses your FrameOS credits; exports, caption changes, copy drafts and posting don't. Sign in with your FrameOS account to get started.
+Everything works on your own footage, in your FrameOS workspace. Sign in with your FrameOS account to get started.
 
 Scheduling posts, posting to TikTok or X, and timeline edits aren't available from here; they live in the FrameOS web app.
 ```
 
-The listing quotes no prices, plans, trials or offers. Mentioning that clips and thumbnails use FrameOS credits is a disclosure, not an advert.
+The listing quotes no prices, plans, trials, offers or credits: OpenAI's metadata check (2026-10-30) flagged a sentence about which actions use FrameOS credits as pricing, so the cost is stated in chat before anything is spent instead.
 
 ## 3. Connect the MCP server
 
