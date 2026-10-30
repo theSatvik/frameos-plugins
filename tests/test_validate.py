@@ -430,6 +430,8 @@ class OpenAIPackageTest(fx.FixtureCase):
 
     def test_merge_fills_version_and_links(self) -> None:
         data = json.loads(self.read(self.REL))
+        # Start from the unfilled state, whatever the repo's file holds today.
+        data["fill_before_upload"].update(sample_video_url="", demo_recording_url="")
         codex = json.loads(self.read(".codex-plugin/plugin.json"))
         merged, todos = validate.merge_openai_manifest(codex, data, "9.8.7")
         self.assertEqual(len(todos), 2)
