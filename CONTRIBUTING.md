@@ -14,6 +14,7 @@ python3 scripts/sync.py
 python3 scripts/test.py
 claude plugin validate . --strict
 claude plugin validate .claude-plugin/plugin.json --strict
+claude plugin validate --profile directory --strict plugins/frameos
 ```
 
 ## Repo layout

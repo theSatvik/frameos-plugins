@@ -42,6 +42,7 @@ Host validators (no credentials needed):
 ```bash
 claude plugin validate . --strict
 claude plugin validate .claude-plugin/plugin.json --strict
+claude plugin validate --profile directory --strict plugins/frameos
 claude plugin eval . --trust-plugin --max-cost-usd 0 --ablation none --no-publish
 ```
 

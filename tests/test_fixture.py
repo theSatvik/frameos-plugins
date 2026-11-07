@@ -28,6 +28,7 @@ import validate  # noqa: E402
 COPIED = list(validate.MANIFESTS) + [
     "VERSION",
     "LICENSE",
+    "plugins/frameos/README.md",
     "assets/icon.png",
     validate.SNAPSHOT,
     "scripts/ground_rules.md",

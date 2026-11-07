@@ -117,12 +117,13 @@ Mock links point at `mock.frameos.invalid`, so nothing real is created. [dev/REA
 
 ## Packages in this repo
 
-The repo root is the plugin. One set of skills serves every host; each host reads its own manifest.
+One set of skills serves every host, and each host reads its own manifest. For Claude, the plugin is [`plugins/frameos/`](plugins/frameos/): the marketplace and the Claude Directory install that folder, and `scripts/sync.py` keeps its skills in step with [`skills/`](skills/). The root manifests serve the other hosts.
 
 | File or folder | What it is | Read by |
 |---|---|---|
 | [`skills/`](skills/) | The eight skills: [frameos-setup](skills/frameos-setup/SKILL.md), [frameos-clip](skills/frameos-clip/SKILL.md), [frameos-captions](skills/frameos-captions/SKILL.md), [frameos-find-moments](skills/frameos-find-moments/SKILL.md), [frameos-thumbnails](skills/frameos-thumbnails/SKILL.md), [frameos-publish](skills/frameos-publish/SKILL.md), [frameos-library](skills/frameos-library/SKILL.md), [frameos-repurpose](skills/frameos-repurpose/SKILL.md). Each has `references/` and `agents/openai.yaml`. | Every host; `npx skills`; skill ZIP uploads |
-| [`.claude-plugin/`](.claude-plugin/) | Claude plugin manifest and marketplace | Claude Code; claude.ai, Claude Desktop and Cowork; Devin falls back to it |
+| [`plugins/frameos/`](plugins/frameos/) | The Claude plugin itself: manifest, `.mcp.json`, a synced copy of the skills with Claude-only setup steps, README and licence. The marketplace and the Claude Directory install this folder, so the repo's docs, scripts and tests never ship with it | Claude Code; claude.ai, Claude Desktop and Cowork |
+| [`.claude-plugin/`](.claude-plugin/) | Claude marketplace (pointing at `plugins/frameos/`) and the root plugin manifest | Claude Code; claude.ai, Claude Desktop and Cowork; Devin falls back to it |
 | [`.mcp.json`](.mcp.json) | The FrameOS connection in Claude Code's format | Claude Code; Devin and VS Code when they install the Claude-format plugin |
 | [`.codex-plugin/`](.codex-plugin/), [`.agents/plugins/marketplace.json`](.agents/plugins/marketplace.json) | Codex plugin manifest, its own connection file (`.codex-plugin/mcp.json`) and marketplace | Codex CLI and app; ChatGPT plugin directory submission |
 | [`.cursor-plugin/plugin.json`](.cursor-plugin/plugin.json) | Cursor plugin, connection included | Cursor |

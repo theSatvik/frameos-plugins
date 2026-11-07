@@ -7,16 +7,11 @@ Layouts:
   (``<skill>/SKILL.md``), as claude.ai / Claude Desktop Skills upload expects.
 * ``dist/perplexity/<skill>.zip`` - ``SKILL.md`` at the ZIP root, as Perplexity
   Computer's skill upload expects (max 10 MB).
-* ``dist/frameos-plugin-<version>.zip`` - the plugin contents at the ZIP root
-  (exactly one ``.claude-plugin/plugin.json``) for claude.ai / Desktop "Upload
-  plugin". Excludes repo tooling and anything that is not part of the plugin:
-  tests/, dev/, evals/, docs/submission/, dist/, .git/, .github/, plus scripts/
-  (maintainer tooling), agent-plugin/ (the Agent Plugins copy installed from
-  GitHub; shipping it would put a second plugin manifest and a second copy of
-  every skill in the archive), the marketplace catalogs
-  .claude-plugin/marketplace.json and .agents/ (a plugin upload is one plugin,
-  not a marketplace) and server.json (the MCP Registry listing of the
-  connector, not part of the plugin).
+* ``dist/frameos-plugin-<version>.zip`` - the Claude plugin, ``plugins/frameos/``,
+  at the ZIP root (exactly one ``.claude-plugin/plugin.json``) for claude.ai /
+  Desktop "Upload plugin". It is the same folder the marketplace and the Claude
+  Directory install: manifest, icon, ``.mcp.json``, skills, README and licence, with
+  none of the repo's docs, scripts, tests or other apps' manifests.
 * ``dist/frameos-openai-<version>.zip`` - the OpenAI Plugin Directory upload
   (ChatGPT and Codex). One Codex-format plugin root and nothing else:
   ``.codex-plugin/plugin.json`` (the repo's Codex manifest, pointed at the root
@@ -59,12 +54,10 @@ FILE_MODE = 0o100644
 DIR_MODE = 0o040755
 PERPLEXITY_MAX_BYTES = 10 * 1024 * 1024
 
-# Top-level paths (posix, relative to the repo root) never shipped in the plugin ZIP.
-PLUGIN_EXCLUDES = (
-    ".git", ".github", "tests", "dev", "evals", "dist", "docs/submission",
-    "scripts", "agent-plugin", ".agents", ".claude-plugin/marketplace.json", ".gitignore",
-    "server.json",
-)
+# The Claude plugin folder; the plugin ZIP is exactly its contents.
+CLAUDE_PLUGIN_DIR = "plugins/frameos"
+# What a Claude plugin may hold (the same rule validate.py enforces on the folder).
+PLUGIN_TOP_LEVEL = {".claude-plugin", ".mcp.json", "skills", "README.md", "LICENSE"}
 # Names skipped everywhere (junk, caches, local test homes).
 JUNK_NAMES = {
     ".DS_Store", "Thumbs.db", "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache",
@@ -175,9 +168,9 @@ def _verify(path: Path, kind: str, skill: str = "") -> None:
         manifests = [n for n in names if n.endswith(".claude-plugin/plugin.json")]
         if manifests != [".claude-plugin/plugin.json"]:
             raise BuildError(f"{path}: needs exactly one .claude-plugin/plugin.json at the root, found {manifests}")
-        leaked = [n for n in names if any(n == e or n.startswith(e + "/") for e in PLUGIN_EXCLUDES)]
-        if leaked:
-            raise BuildError(f"{path}: excluded paths leaked into the plugin ZIP: {leaked[:5]}")
+        stray = sorted({n.split("/")[0] for n in names} - PLUGIN_TOP_LEVEL)
+        if stray:
+            raise BuildError(f"{path}: only {sorted(PLUGIN_TOP_LEVEL)} belong in the plugin ZIP, found {stray}")
     elif kind == "openai":
         manifests = [n for n in names if n.endswith("plugin.json")]
         if manifests != [".codex-plugin/plugin.json"]:
@@ -330,15 +323,10 @@ def build(root: Path, out: Optional[Path] = None, skip_sync_check: bool = False)
         _verify(dest, "perplexity")
         built[f"perplexity/{sdir.name}"] = dest
 
-    dirs, files = collect(root, PLUGIN_EXCLUDES)
-    # The output dir may live inside the repo under another name; never zip it into itself.
-    try:
-        out_rel = out.relative_to(root).as_posix()
-    except ValueError:
-        out_rel = None
-    if out_rel:
-        dirs = [d for d in dirs if not (d == out_rel + "/" or d.startswith(out_rel + "/"))]
-        files = {k: v for k, v in files.items() if not k.startswith(out_rel + "/")}
+    claude_dir = root / CLAUDE_PLUGIN_DIR
+    if not (claude_dir / ".claude-plugin" / "plugin.json").is_file():
+        raise BuildError(f"{CLAUDE_PLUGIN_DIR}/.claude-plugin/plugin.json is missing; the plugin ZIP is built from that folder")
+    dirs, files = collect(claude_dir)
     dest = out / f"frameos-plugin-{version}.zip"
     write_zip(dest, dirs, files)
     _verify(dest, "plugin")

@@ -76,14 +76,17 @@ class BuildDistTest(fx.FixtureCase):
         path = built["plugin"]
         self.assertEqual(path.name, f"frameos-plugin-{self.version}.zip")
         entries = names(path)
-        for required in (".claude-plugin/plugin.json", ".codex-plugin/plugin.json", ".codex-plugin/mcp.json", ".mcp.json",
-                         ".cursor-plugin/plugin.json", "gemini-extension.json", "GEMINI.md", "README.md",
-                         "LICENSE", "VERSION", "assets/icon.png", "skills/frameos-clip/SKILL.md",
-                         "commands/frameos/clip.toml", "docs/install/codex.md"):
+        # The ZIP is plugins/frameos/: the Claude plugin and nothing else.
+        for required in (".claude-plugin/plugin.json", ".mcp.json", "README.md", "LICENSE",
+                         "skills/frameos-clip/SKILL.md", "skills/frameos-setup/SKILL.md"):
             self.assertIn(required, entries)
-        for excluded in ("tests/", "dev/", "evals/", "docs/submission/", ".github/", "dist/", ".git/",
-                         "scripts/", "agent-plugin/", ".agents/", ".claude-plugin/marketplace.json", "server.json"):
+        self.assertEqual(sorted({n.split("/")[0] for n in entries}),
+                         [".claude-plugin", ".mcp.json", "LICENSE", "README.md", "skills"])
+        for excluded in (".codex-plugin/", ".cursor-plugin/", "gemini-extension.json", "GEMINI.md", "VERSION",
+                         "assets/", "commands/", "docs/", "tests/", "dev/", "evals/", "scripts/", "agent-plugin/",
+                         "server.json", "plugins/"):
             self.assertFalse(any(n.startswith(excluded) for n in entries), f"{excluded} leaked: {entries}")
+        self.assertFalse(any(n.endswith("/agents/openai.yaml") for n in entries))
         self.assertEqual([n for n in entries if n.endswith("plugin.json") and ".claude-plugin" in n],
                          [".claude-plugin/plugin.json"])
         self.assertFalse(any(n.endswith(".DS_Store") for n in entries))

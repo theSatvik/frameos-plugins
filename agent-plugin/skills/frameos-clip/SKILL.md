@@ -74,7 +74,7 @@ Work out the settings from what the user already said. Ask one short round of qu
 2. Call `create_upload_link` with `filename` set to the file's real name, extension included (the project is titled after it).
 3. Upload the bytes within the hour (the link expires after 1 hour), quoting both arguments:
    `curl -sS --fail -X PUT -H "Content-Type: video/mp4" --upload-file "/path/to/video.mp4" "UPLOAD_URL"`
-   Replace UPLOAD_URL with the returned `upload_url`. It is a signed secret: never show it to the user. A non-zero exit means the upload failed: get a new link and try once more.
+   Replace UPLOAD_URL with the returned `upload_url`. It is a private link that expires in an hour: keep it out of your replies. A non-zero exit means the upload failed: get a new link and try once more.
 4. Call `submit_uploaded_video` with the returned `gs_path` and the same settings as for a link.
 
 **No shell** (chat apps): you cannot upload a local file. Ask for a public link, or point the user to upload it in the web app at https://frameos.studio/dashboard.

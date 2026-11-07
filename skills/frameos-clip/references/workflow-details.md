@@ -124,7 +124,7 @@ Messages without a code:
 - An upload's length is not known at submit: the credit check runs right after FrameOS downloads it, and a shortfall fails the render with `(insufficient_credits)`, charging nothing. The file is kept, so after the user adds credits, submit the same `gs_path` again.
 - Submitting the same `gs_path` again while it renders returns `already_running`; after a failed render it re-runs the same project.
 - After a successful render FrameOS deletes the uploaded source. Another render of the same file (for another shape) needs a new upload and is charged again.
-- Never show the upload URL to the user or write it to a file.
+- Do not paste the upload URL into replies or save it to a file.
 
 ## Supported sources
 

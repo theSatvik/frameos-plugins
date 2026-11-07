@@ -106,6 +106,8 @@ GEMINI_COMMANDS = {
 MANIFESTS = (
     ".claude-plugin/plugin.json",
     ".claude-plugin/marketplace.json",
+    "plugins/frameos/.claude-plugin/plugin.json",
+    "plugins/frameos/.mcp.json",
     ".codex-plugin/plugin.json",
     ".agents/plugins/marketplace.json",
     ".mcp.json",
@@ -119,6 +121,27 @@ MANIFESTS = (
     "docs/submission/openai-package.json",
 )
 
+# The Claude plugin is plugins/frameos/ (the marketplace's source and the Claude
+# Directory submission's path), so the directory's policy check sees only these.
+CLAUDE_PLUGIN_DIR = "plugins/frameos"
+CLAUDE_PLUGIN_ENTRIES = {".claude-plugin", ".mcp.json", "skills", "README.md", "LICENSE"}
+# plugin.json fields released Claude Code builds read, plus listing fields only
+# the Claude Directory reads. Anything else is reported as "Unrecognized field".
+CLAUDE_MANIFEST_KEYS = {
+    "name", "version", "description", "author", "homepage", "repository", "license", "keywords",
+    "commands", "agents", "skills", "hooks", "mcpServers", "outputStyles", "lspServers", "userConfig",
+}
+CLAUDE_LISTING_KEYS = {"displayName", "documentationUrl", "supportUrl", "privacyPolicyUrl", "termsOfServiceUrl"}
+# SKILL.md frontmatter keys the directory accepts from an organization that isn't Verified.
+CLAUDE_SKILL_KEYS = {"name", "description", "argument-hint"}
+# Text the directory treats as "downloads code and runs it straight away".
+DOWNLOAD_AND_RUN_RE = re.compile(
+    r"curl[^|\n]*\|\s*(?:sudo\s+)?(?:ba|z)?sh\b|wget[^|\n]*\|\s*(?:ba)?sh\b|\bnpx\s|\buvx\s|\bbunx\s"
+    r"|pipx\s+run|bash\s+<\(curl|\biex\b|\bnpm\s+(?:i|install)\b|\bpip\s+install\b"
+)
+# Reading a credential from the user's machine (home-directory paths, env vars).
+LOCAL_CREDENTIAL_RE = re.compile(r"~/\.|\$HOME/|\$\{?[A-Z_]*(?:TOKEN|KEY|SECRET)\b|\bgetenv\b|\benviron\b")
+
 # A path element that is a dict selects the list item whose fields match it.
 JsonPath = Tuple[Any, ...]
 _SEL = {"name": PLUGIN_NAME}
@@ -126,6 +149,7 @@ _SEL = {"name": PLUGIN_NAME}
 # Every place the plugin version must appear (bump_version.py rewrites these).
 VERSION_SITES: Tuple[Tuple[str, JsonPath], ...] = (
     (".claude-plugin/plugin.json", ("version",)),
+    ("plugins/frameos/.claude-plugin/plugin.json", ("version",)),
     (".claude-plugin/marketplace.json", ("plugins", _SEL, "version")),
     (".codex-plugin/plugin.json", ("version",)),
     (".cursor-plugin/plugin.json", ("version",)),
@@ -133,6 +157,7 @@ VERSION_SITES: Tuple[Tuple[str, JsonPath], ...] = (
     ("agent-plugin/plugin.json", ("version",)),
     (".github/plugin/marketplace.json", ("plugins", _SEL, "version")),
     (".mcp.json", ("mcpServers", SERVER_KEY, "headers", VERSION_HEADER)),
+    ("plugins/frameos/.mcp.json", ("mcpServers", SERVER_KEY, "headers", VERSION_HEADER)),
     (".codex-plugin/mcp.json", ("mcpServers", SERVER_KEY, "http_headers", VERSION_HEADER)),
     (".cursor-plugin/plugin.json", ("mcpServers", SERVER_KEY, "headers", VERSION_HEADER)),
     ("gemini-extension.json", ("mcpServers", SERVER_KEY, "headers", VERSION_HEADER)),
@@ -1049,10 +1074,11 @@ def check_manifests_parse(ctx: Ctx) -> None:
 def check_identity(ctx: Ctx) -> None:
     r, m, root = ctx.report, ctx.manifests, ctx.root
     for name in (".claude-plugin/plugin.json", ".codex-plugin/plugin.json", ".cursor-plugin/plugin.json",
-                 "gemini-extension.json", "agent-plugin/plugin.json"):
+                 "gemini-extension.json", "agent-plugin/plugin.json", "plugins/frameos/.claude-plugin/plugin.json"):
         if name in m and m[name].get("name") != PLUGIN_NAME:
             r.error(name, f"name must be {PLUGIN_NAME!r}, found {m[name].get('name')!r}")
-    for name in (".claude-plugin/plugin.json", ".codex-plugin/plugin.json", ".cursor-plugin/plugin.json"):
+    for name in (".claude-plugin/plugin.json", ".codex-plugin/plugin.json", ".cursor-plugin/plugin.json",
+                 "plugins/frameos/.claude-plugin/plugin.json"):
         if name in m and "hooks" in m[name]:
             r.error(name, "declares hooks; lifecycle hooks are forbidden (directories reject them)")
     if ".codex-plugin/plugin.json" in m and "apps" in m[".codex-plugin/plugin.json"]:
@@ -1069,8 +1095,9 @@ def check_identity(ctx: Ctx) -> None:
         return entry
 
     e = plugin_entry(".claude-plugin/marketplace.json")
-    if e is not None and e.get("source") != "./":
-        r.error(".claude-plugin/marketplace.json", f"plugins[frameos].source must be './', found {e.get('source')!r}")
+    if e is not None and e.get("source") != f"./{CLAUDE_PLUGIN_DIR}":
+        r.error(".claude-plugin/marketplace.json",
+                f"plugins[frameos].source must be './{CLAUDE_PLUGIN_DIR}' (the Claude plugin folder), found {e.get('source')!r}")
     if ".claude-plugin/marketplace.json" in m and m[".claude-plugin/marketplace.json"].get("name") != PLUGIN_NAME:
         r.error(".claude-plugin/marketplace.json", f"marketplace name must be {PLUGIN_NAME!r}")
     e = plugin_entry(".agents/plugins/marketplace.json")
@@ -1270,6 +1297,65 @@ def check_agent_plugin(ctx: Ctx) -> None:
     for forbidden in ("bin", "hooks", "hooks.json", "CLAUDE.md", "AGENTS.md"):
         if (ctx.root / "agent-plugin" / forbidden).exists():
             r.error(f"agent-plugin/{forbidden}", "forbidden in the plugin root")
+
+
+def check_claude_plugin(ctx: Ctx) -> None:
+    """plugins/frameos/ holds only what the Claude plugin needs and nothing the
+    Claude Directory's policy check refuses from an organization that isn't Verified."""
+    r, m, root = ctx.report, ctx.manifests, ctx.root
+    base = root / CLAUDE_PLUGIN_DIR
+    if not base.is_dir():
+        r.error(CLAUDE_PLUGIN_DIR, "missing; run python3 scripts/sync.py after adding its manifest, .mcp.json and README.md")
+        return
+    for entry in sorted(p.name for p in base.iterdir()):
+        if entry not in CLAUDE_PLUGIN_ENTRIES:
+            r.error(f"{CLAUDE_PLUGIN_DIR}/{entry}", f"not allowed in the Claude plugin; only {sorted(CLAUDE_PLUGIN_ENTRIES)}")
+    for entry in sorted(CLAUDE_PLUGIN_ENTRIES):
+        if not (base / entry).exists():
+            r.error(f"{CLAUDE_PLUGIN_DIR}/{entry}", "missing")
+    extra = sorted(p.name for p in (base / ".claude-plugin").iterdir() if p.name not in ("plugin.json", "icon.png")) if (base / ".claude-plugin").is_dir() else []
+    if extra:
+        r.error(f"{CLAUDE_PLUGIN_DIR}/.claude-plugin", f"only plugin.json and icon.png belong here, found {extra}")
+    name = f"{CLAUDE_PLUGIN_DIR}/.claude-plugin/plugin.json"
+    data = m.get(name)
+    if data is not None:
+        if "icon" in data:
+            r.error(name, "leave 'icon' out: the directory finds .claude-plugin/icon.png itself, and a setting that refers to an image is flagged")
+        unknown = sorted(set(data) - CLAUDE_MANIFEST_KEYS - CLAUDE_LISTING_KEYS)
+        if unknown:
+            r.error(name, f"fields Claude Code doesn't read and the directory doesn't list: {unknown}")
+        root_manifest = m.get(".claude-plugin/plugin.json") or {}
+        for key in ("description", "author", "homepage", "repository", "license", "keywords", "displayName",
+                    "documentationUrl", "supportUrl", "privacyPolicyUrl", "termsOfServiceUrl"):
+            if key in root_manifest and data.get(key) != root_manifest.get(key):
+                r.error(name, f"{key} differs from .claude-plugin/plugin.json")
+    mcp = f"{CLAUDE_PLUGIN_DIR}/.mcp.json"
+    if mcp in m and ".mcp.json" in m and m[mcp] != m[".mcp.json"]:
+        r.error(mcp, "must equal the root .mcp.json (the same server and sign-in settings)")
+    for path in sorted(base.rglob("*")):
+        if not path.is_file():
+            continue
+        rp = rel(root, path)
+        if rp == f"{CLAUDE_PLUGIN_DIR}/.claude-plugin/icon.png":
+            continue  # the listing icon, where the directory looks for it; nothing refers to it
+        if path.suffix.lower() in IMAGE_EXTS or path.suffix.lower() in (".ttf", ".otf", ".woff", ".woff2") or "/bin/" in f"/{rp}":
+            r.error(rp, "images, fonts and bin/ files can be refused for an organization that isn't Verified")
+            continue
+        text = read_text_or_none(path)
+        if text is None:
+            r.error(rp, "not UTF-8 text; the Claude plugin ships only text")
+            continue
+        if path.name == "SKILL.md" and text.startswith("---\n"):
+            end = text.find("\n---", 4)
+            keys = set(re.findall(r"(?m)^([A-Za-z][\w-]*):", text[4:end])) if end > 0 else set()
+            extra = sorted(keys - CLAUDE_SKILL_KEYS)
+            if extra:
+                r.error(rp, f"frontmatter keys the directory refuses from an organization that isn't Verified: {extra}")
+        for lineno, line in enumerate(text.split("\n"), start=1):
+            if DOWNLOAD_AND_RUN_RE.search(line):
+                r.error(f"{rp}:{lineno}", "a command that downloads code and runs it; the directory flags it as an install-time risk")
+            if LOCAL_CREDENTIAL_RE.search(line):
+                r.error(f"{rp}:{lineno}", "reads a path or variable on the user's machine; the directory flags credential reads")
 
 
 def check_cursor(ctx: Ctx) -> None:
@@ -1971,7 +2057,7 @@ def check_forbidden(ctx: Ctx) -> None:
                 if FORBIDDEN_EMAIL in line and not NEGATION_RE.search(line):
                     r.error(f"{name}:{lineno}", f"uses {FORBIDDEN_EMAIL}; the contact address is support@frameos.studio")
         user_facing = (
-            name.startswith(("skills/", "agent-plugin/skills/", "commands/", "docs/"))
+            name.startswith(("skills/", "agent-plugin/skills/", "plugins/frameos/", "commands/", "docs/"))
             or name in ("README.md", "GEMINI.md")
         )
         if user_facing and path.suffix in (".md", ".toml", ".yaml", ".yml"):
@@ -2062,6 +2148,7 @@ CHECKS = (
     check_versions,
     check_mcp_configs,
     check_agent_plugin,
+    check_claude_plugin,
     check_cursor,
     check_codex,
     check_openai_package,

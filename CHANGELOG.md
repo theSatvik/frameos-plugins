@@ -6,7 +6,15 @@ All notable changes to the FrameOS plugin, skills and extension packages. The fo
 
 ## [0.1.2] - not yet released
 
+### Added
+
+- `plugins/frameos/`, the Claude plugin on its own: manifest, `.mcp.json`, README, licence and a copy of the skills that `scripts/sync.py` keeps in step with `skills/`, with the setup skill's steps narrowed to Claude Code, claude.ai, Claude Desktop and Cowork, only `name` and `description` in each skill's frontmatter (the directory refuses other keys from organizations that aren't Verified), and the Codex-only `agents/openai.yaml` files left out. The listing icon sits at `.claude-plugin/icon.png`, where the directory looks for it. `.claude-plugin/marketplace.json` now points at it, and `frameos-plugin-<version>.zip` is built from it. The Claude Directory's automatic policy check had refused v0.1.1 because the whole repo was the plugin, so it read the release docs (a registry key path), a download-and-run command, the maintainer scripts (one opens the icon) and manifest fields Claude Code doesn't read. `validate.py` now checks the folder for each of those.
+
 ### Changed
+
+- The setup skill no longer suggests `npx skills add`: an agent reading it already has the skills. The README and install guides still give it.
+- CI also runs `claude plugin validate --profile directory --strict plugins/frameos`, with the Claude Code CLI pinned to 2.1.318 (the version that has the directory profile and was used to check this release).
+- The upload-link wording in frameos-clip now says to keep the link out of replies rather than to hide it from the user.
 
 - `recaption_clip` on an overlay clip now saves the new style straight away and returns `status: completed` with `job_id: null`, instead of a 409 (connector update deployed on 2026-10-28). The tool snapshot, the mock server and its test, and the captions skill follow it.
 

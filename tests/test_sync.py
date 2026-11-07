@@ -104,6 +104,42 @@ class MirrorTest(fx.FixtureCase):
         self.assertEqual(snapshot_tree(self.path("skills")), snapshot_tree(self.path("agent-plugin/skills")))
 
 
+class ClaudeCopyTest(fx.FixtureCase):
+    """plugins/frameos/skills is skills/ with the setup steps narrowed to Claude apps."""
+
+    HOSTS = (
+        "# Connecting FrameOS, app by app\n\nPreamble.\n\n"
+        "## Claude Code (terminal)\n\n- `/plugin install frameos@frameos`\n\n"
+        "## Codex (CLI and app)\n\n- `codex plugin add frameos@frameos`\n\n"
+        "## Gemini CLI\n\n- Tokens are stored in `~/.gemini/mcp-oauth-tokens.json`\n\n"
+        "## Any other MCP client\n\n- Add the server URL.\n"
+    )
+
+    def test_setup_hosts_keep_only_claude_and_generic_sections(self) -> None:
+        self.write("skills/frameos-setup/references/hosts.md", self.HOSTS)
+        sync.sync(self.root)
+        text = self.read("plugins/frameos/skills/frameos-setup/references/hosts.md")
+        self.assertIn("## Claude Code (terminal)", text)
+        self.assertIn("## Any other MCP client", text)
+        self.assertIn("Steps for every other app are at https://frameos.studio/plugin.", text)
+        self.assertNotIn("Codex", text)
+        self.assertNotIn("~/.gemini", text)
+        # The source and the Agent Plugins mirror keep every app.
+        self.assertIn("## Codex", self.read("agent-plugin/skills/frameos-setup/references/hosts.md"))
+
+    def test_openai_metadata_is_left_out(self) -> None:
+        self.write("skills/frameos-clip/agents/openai.yaml", "interface:\n  display_name: Clip\n")
+        sync.sync(self.root)
+        self.assertFalse(self.path("plugins/frameos/skills/frameos-clip/agents/openai.yaml").exists())
+        self.assertTrue(self.path("agent-plugin/skills/frameos-clip/agents/openai.yaml").exists())
+
+    def test_licence_is_copied_and_checked(self) -> None:
+        self.assertEqual(self.read("plugins/frameos/LICENSE"), self.read("LICENSE"))
+        self.write("plugins/frameos/LICENSE", "changed\n")
+        drift = {d.path for d in sync.sync(self.root, check=True).drift}
+        self.assertIn("plugins/frameos/LICENSE", drift)
+
+
 class CliTest(fx.FixtureCase):
     def run_sync(self, *args: str) -> subprocess.CompletedProcess:
         return subprocess.run(

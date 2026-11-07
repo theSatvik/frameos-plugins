@@ -9,6 +9,12 @@ What it does, in order:
 2. Mirrors ``skills/`` into ``agent-plugin/skills/`` byte for byte (Agent
    Plugins hosts reject symlinks that leave the plugin root, so it is a real
    copy). Files that no longer exist in ``skills/`` are deleted from the mirror.
+3. Builds the Claude plugin's copy, ``plugins/frameos/skills/``, from ``skills/``
+   with the setup skill's per-app steps narrowed to Claude Code, claude.ai,
+   Claude Desktop and Cowork, and copies ``LICENSE`` and ``assets/icon.png``
+   (as ``.claude-plugin/icon.png``) into ``plugins/frameos/``.
+   That folder is the whole Claude plugin (the marketplace's ``source``), so the
+   repo's docs, scripts and tests never ship with it.
 
 Usage::
 
@@ -25,6 +31,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import shutil
 import sys
 from dataclasses import dataclass, field
@@ -36,6 +43,17 @@ GROUND_END = "<!-- ground-rules:end -->"
 RULES_FILE = Path("scripts") / "ground_rules.md"
 SKILLS_DIR = Path("skills")
 MIRROR_DIR = Path("agent-plugin") / "skills"
+CLAUDE_PLUGIN_DIR = Path("plugins") / "frameos"
+CLAUDE_SKILLS_DIR = CLAUDE_PLUGIN_DIR / "skills"
+# The Claude plugin installs only in Claude apps, so its setup skill keeps the
+# Claude sections and the generic one; every other app's steps (and their
+# install commands) stay out of it. Each edit is skipped when its text is absent.
+CLAUDE_HOST_SECTIONS = ("Claude", "Any other MCP client")
+CLAUDE_OTHER_APPS = ("Codex", "ChatGPT", "Cursor", "Gemini", "VS Code", "GitHub Copilot", "Perplexity", "Devin")
+CLAUDE_HOSTS_NOTE = (
+    "This copy covers Claude Code, claude.ai, Claude Desktop and Cowork. "
+    "Steps for every other app are at https://frameos.studio/plugin."
+)
 
 # Never copied into the mirror (and validate.py forbids most of them anyway).
 IGNORED_NAMES = {".DS_Store", "Thumbs.db", "__pycache__", ".pytest_cache"}
@@ -131,9 +149,61 @@ def collect_tree(base: Path) -> Tuple[Dict[str, bytes], List[str]]:
     return files, problems
 
 
+def _keep_sections(text: str, keep: Tuple[str, ...], note: str) -> str:
+    """Keep the preamble and the '## ' sections whose heading starts with one of ``keep``; put ``note`` first."""
+    parts = re.split(r"(?m)^(?=## )", text)
+    kept = [p for p in parts[1:] if p[3:].startswith(keep)]
+    if len(parts) == 1 or not kept:
+        return text
+    return parts[0] + note + "\n\n" + "".join(kept)
+
+
+def _claude_frontmatter(text: str) -> str:
+    """Drop SKILL.md frontmatter keys the Claude Directory refuses from an organization
+    that isn't Verified (it accepts name, description and argument-hint)."""
+    if not text.startswith("---\n"):
+        return text
+    end = text.find("\n---", 4)
+    if end < 0:
+        return text
+    head = re.sub(r"(?m)^license:.*\n", "", text[: end + 1])
+    return head + text[end + 1:]
+
+
+def claude_skill_text(rel: str, text: str) -> str:
+    """The Claude plugin's copy of one file under skills/ (``rel`` is relative to skills/)."""
+    if rel.endswith("/SKILL.md"):
+        text = _claude_frontmatter(text)
+    if rel == "frameos-setup/references/hosts.md":
+        return _keep_sections(text, CLAUDE_HOST_SECTIONS, CLAUDE_HOSTS_NOTE)
+    if rel == "frameos-setup/SKILL.md":
+        text = re.sub(r"(?m)^1\. Identify the app: .*$",
+                      "1. Identify the app: Claude Code, claude.ai / Claude Desktop / Cowork, or another MCP client. If unclear, ask once.",
+                      text)
+        text = re.sub(r"; in Codex `[^`]*` also works", "", text)
+        # Table rows for other apps (reconnect steps, app-specific errors).
+        return re.sub(r"(?m)^\| (?:" + "|".join(map(re.escape, CLAUDE_OTHER_APPS)) + r").*\n", "", text)
+    if rel == "frameos-clip/references/workflow-details.md":
+        text = re.sub(r"(?m)^(\| Has a shell \| )[^|]*\|", r"\1Claude Code, or any agent with a terminal |", text)
+        return re.sub(r"(?m)^(\| Chat only \| )[^|]*\|", r"\1claude.ai, Claude Desktop chat and Cowork |", text)
+    return text
+
+
+def claude_copy(src_files: Dict[str, bytes]) -> Dict[str, bytes]:
+    out: Dict[str, bytes] = {}
+    for rel, data in src_files.items():
+        if rel.endswith("/agents/openai.yaml"):
+            continue  # Codex interface metadata; Claude never reads it
+        if rel.endswith(".md"):
+            out[rel] = claude_skill_text(rel, data.decode("utf-8")).encode("utf-8")
+        else:
+            out[rel] = data
+    return out
+
+
 @dataclass
 class Drift:
-    kind: str  # "ground_rules" | "mirror"
+    kind: str  # "ground_rules" | "mirror" | "claude"
     path: str  # repo-relative posix path
     message: str
 
@@ -191,16 +261,37 @@ def sync(root: Path, check: bool = False) -> SyncResult:
     src_files, problems = collect_tree(root / SKILLS_DIR)
     result.errors.extend(problems)
     src_files.update(expected_overrides)  # in --check mode the source was not rewritten
-    mirror_base = root / MIRROR_DIR
+    _mirror(root, src_files, MIRROR_DIR, "mirror", check, result)
+
+    # 3. The Claude plugin folder: narrowed skills, the licence and the icon
+    # (.claude-plugin/icon.png is where the directory looks for it; nothing in
+    # the plugin refers to it, so it is not a file the plugin's code could run).
+    _mirror(root, claude_copy(src_files), CLAUDE_SKILLS_DIR, "claude", check, result)
+    for src, dst in (("LICENSE", "LICENSE"), ("assets/icon.png", ".claude-plugin/icon.png")):
+        source = root / src
+        if not source.is_file():
+            continue
+        target = root / CLAUDE_PLUGIN_DIR / dst
+        if not target.is_file() or target.read_bytes() != source.read_bytes():
+            result.drift.append(Drift("claude", (CLAUDE_PLUGIN_DIR / dst).as_posix(), f"differs from {src}"))
+            if not check:
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(source.read_bytes())
+    return result
+
+
+def _mirror(root: Path, src_files: Dict[str, bytes], mirror_dir: Path, kind: str, check: bool, result: SyncResult) -> None:
+    """Make ``mirror_dir`` hold exactly ``src_files`` (posix paths relative to it)."""
+    mirror_base = root / mirror_dir
     dst_files, dst_problems = collect_tree(mirror_base)
     result.errors.extend(dst_problems)
 
-    mirror_rel = MIRROR_DIR.as_posix()
+    mirror_rel = mirror_dir.as_posix()
     for rel, data in sorted(src_files.items()):
         if rel not in dst_files:
-            result.drift.append(Drift("mirror", f"{mirror_rel}/{rel}", "missing from the mirror"))
+            result.drift.append(Drift(kind, f"{mirror_rel}/{rel}", "missing from the mirror"))
         elif dst_files[rel] != data:
-            result.drift.append(Drift("mirror", f"{mirror_rel}/{rel}", f"differs from {SKILLS_DIR.as_posix()}/{rel}"))
+            result.drift.append(Drift(kind, f"{mirror_rel}/{rel}", f"differs from {SKILLS_DIR.as_posix()}/{rel}"))
         else:
             continue
         if not check:
@@ -208,7 +299,7 @@ def sync(root: Path, check: bool = False) -> SyncResult:
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(data)
     for rel in sorted(set(dst_files) - set(src_files)):
-        result.drift.append(Drift("mirror", f"{mirror_rel}/{rel}", f"stale (not in {SKILLS_DIR.as_posix()}/)"))
+        result.drift.append(Drift(kind, f"{mirror_rel}/{rel}", f"stale (not in {SKILLS_DIR.as_posix()}/)"))
         if not check:
             (mirror_base / rel).unlink()
 
@@ -218,13 +309,13 @@ def sync(root: Path, check: bool = False) -> SyncResult:
             for name in filenames:
                 if _ignored(name):
                     rel = (Path(dirpath) / name).relative_to(root).as_posix()
-                    result.drift.append(Drift("mirror", rel, "junk file in the mirror"))
+                    result.drift.append(Drift(kind, rel, "junk file in the mirror"))
                     if not check:
                         (Path(dirpath) / name).unlink()
             for d in list(dirnames):
                 if _ignored(d):
                     rel = (Path(dirpath) / d).relative_to(root).as_posix()
-                    result.drift.append(Drift("mirror", rel + "/", "junk directory in the mirror"))
+                    result.drift.append(Drift(kind, rel + "/", "junk directory in the mirror"))
                     if not check:
                         shutil.rmtree(Path(dirpath) / d)
                     dirnames.remove(d)
@@ -234,7 +325,6 @@ def sync(root: Path, check: bool = False) -> SyncResult:
                 p = Path(dirpath)
                 if p != mirror_base and not any(p.iterdir()):
                     p.rmdir()
-    return result
 
 
 def main(argv: Optional[List[str]] = None) -> int:
@@ -254,7 +344,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         if result.drift:
             print(f"{len(result.drift)} file(s) out of sync. Run: python3 scripts/sync.py", file=sys.stderr)
         elif not result.errors and not args.quiet:
-            print("sync --check: ground-rules blocks and agent-plugin/skills mirror are in sync")
+            print("sync --check: ground-rules blocks, agent-plugin/skills and plugins/frameos are in sync")
         return 0 if result.ok else 1
     if not args.quiet:
         for d in result.drift:

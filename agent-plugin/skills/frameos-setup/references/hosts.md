@@ -97,5 +97,4 @@ The proof in every app is the same: ask "What is my FrameOS credit balance?" and
 ## Any other MCP client
 
 - Add a remote server named `frameos` with URL `https://frameos.studio/mcp`, transport Streamable HTTP, OAuth sign-in. If the client lets you set scopes, use `frameos:mcp`.
-- Skills only, for agents that read SKILL.md folders: `npx skills add theSatvik/frameos-plugins`. The skills still need the server above to do anything.
 - Prove it with the credit-balance question.
