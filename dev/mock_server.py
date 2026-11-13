@@ -48,14 +48,16 @@ from pydantic import BaseModel, Field, TypeAdapter, ValidationError, field_valid
 
 # The real server's instructions, verbatim.
 INSTRUCTIONS = (
-    "Create clips with submit_video, then poll get_job and call list_clips after completion. "
-    "Processing consumes FrameOS credits. Use only projects the connected account owns."
+    "Create clips with submit_video (or create_upload_link, then submit_uploaded_video), poll get_job, then call list_clips. "
+    "Only submit_video, submit_uploaded_video and create_thumbnail_job spend credits (not refunded). "
+    "Confirm with the user before those, before set_caption_style or recaption_clip (they overwrite a clip) and before post_clip (it publishes). "
+    "Use only projects the connected account owns."
 )
 
 MOCK_HOST = "https://mock.frameos.invalid"
 
 # The real server's identity (mcp_server/frameos_mcp/server.py), verbatim.
-SERVER_VERSION = "0.1.1"
+SERVER_VERSION = "0.1.2"
 WEBSITE_URL = "https://frameos.studio/plugin"
 ICON_URL = "https://frameos.studio/frameos/frameos-favicon.png"
 # The real server adds this sentence to every 402 (a short credit balance).
@@ -1205,7 +1207,7 @@ class MockState:
 
     def _start_video(self, source: str, filename: str, max_clips: int, aspect_ratio: str,
                      focus_prompt: Optional[str], *, uploaded: bool = False) -> dict:
-        if aspect_ratio not in {"9:16", "3:4", "4:5", "1:1", "16:9"}:
+        if aspect_ratio not in {"9:16", "3:4", "4:5", "1:1", "4:3", "16:9"}:
             raise FrameOSHTTPError(422, "Unsupported aspect ratio")
         prior = None
         for project in sorted(self.projects.values(), key=lambda p: p.created_at, reverse=True):
@@ -1916,49 +1918,49 @@ def create_server(state: Optional[MockState] = None) -> MCPServer:
         log_level="WARNING",
     )
 
-    @server.tool(title="Submit Video", annotations=ToolAnnotations(title="Submit Video", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=True))
+    @server.tool(title="Submit Video", annotations=ToolAnnotations(title="Submit Video", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=True))
     async def submit_video(
         source_url: str,
         max_clips: int = 3,
-        aspect_ratio: Literal["9:16", "3:4", "4:5", "1:1", "16:9"] = "9:16",
+        aspect_ratio: Literal["9:16", "3:4", "4:5", "1:1", "4:3", "16:9"] = "9:16",
         focus_prompt: str | None = None,
     ) -> dict:
-        """Submit a video URL for AI clipping. Starts a credit-consuming render job and returns its job ID. focus_prompt is an optional steer; only its first 400 characters are used."""
+        """Submit a public video link for AI clipping: FrameOS downloads it and starts a render job (poll get_job). Spends 1 credit per source minute, rounded up, once the clips are saved; not refunded, and a failed run costs nothing. A link still rendering returns its job; one whose last run failed, stopped or stalled is re-run in that project, replacing its settings and, on success, its clips; a finished one makes a new project, charged again. A refused start still leaves a failed project. focus_prompt is an optional steer; only its first 400 characters are used."""
         return _call(state, state.submit_video, source_url, max_clips, aspect_ratio, focus_prompt)
 
     @server.tool(title="List Projects", annotations=ToolAnnotations(title="List Projects", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def list_projects(limit: int = 10, offset: int = 0) -> list[dict]:
-        """List clipping projects owned by the connected FrameOS account."""
+        """List clipping projects owned by the connected FrameOS account, newest first (limit up to 50, offset to page), with each one's status, progress and clip count. Read-only: changes nothing and uses no credits."""
         return _call(state, state.list_projects, limit, offset)
 
     @server.tool(title="Get Project", annotations=ToolAnnotations(title="Get Project", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def get_project(project_id: str) -> dict:
-        """Get the status and summary of one FrameOS clipping project."""
+        """Get the status and summary of one FrameOS clipping project: status, progress, source link and clip count. Read-only: changes nothing and uses no credits."""
         return _call(state, state.get_project, project_id)
 
     @server.tool(title="Get Job", annotations=ToolAnnotations(title="Get Job", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def get_job(job_id: str) -> dict:
-        """Check render progress using the job ID returned by submit_video."""
+        """Check a job's progress using the job ID from submit_video, submit_uploaded_video, export_clip, export_collection, recaption_clip or post_clip: returns its state, progress, message, ETA and any result. Read-only and safe to poll: it never starts, changes or charges anything."""
         return _call(state, state.get_job, job_id)
 
     @server.tool(title="List Clips", annotations=ToolAnnotations(title="List Clips", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def list_clips(project_id: str) -> list[dict]:
-        """List project clips. If exportRequired is true, call export_clip for the captioned download."""
+        """List a project's clips: titles, scores, transcripts, timings and media links. If exportRequired is true, call export_clip for the captioned download. Read-only: changes nothing and uses no credits. Media links are signed URLs that expire in about an hour and work for anyone who has them."""
         return _call(state, state.list_clips, project_id)
 
     @server.tool(title="Whoami", annotations=ToolAnnotations(title="Whoami", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def whoami() -> dict:
-        """Identify the connected FrameOS user, workspace, plan, and credit balance."""
+        """Identify the connected FrameOS user, workspace, plan, and credit balance. Read-only: changes nothing and uses no credits. The balance can be up to a minute old and doesn't subtract credits held for renders still running."""
         return _call(state, state.whoami)
 
     @server.tool(title="Get Usage", annotations=ToolAnnotations(title="Get Usage", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def get_usage() -> dict:
-        """Read the workspace's recent credit usage and current credit balance."""
+        """Read the workspace's recent credit usage (its 10 newest charges from the last 30 days, plus 30-day totals) and current credit balance. Read-only: changes nothing and uses no credits. Preview images are signed URLs that expire in about an hour and work for anyone who has them."""
         return _call(state, state.get_usage)
 
     @server.tool(title="Describe Clip", annotations=ToolAnnotations(title="Describe Clip", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def describe_clip(clip_id: str) -> dict:
-        """Read one clip's title, score, transcript, aspect, preview, and export requirement."""
+        """Read one clip's title, score, transcript, aspect, layout, preview, and export requirement. Read-only: changes nothing and uses no credits. Media links are signed URLs that expire in about an hour and work for anyone who has them."""
         return _call(state, state.describe_clip, clip_id)
 
     @server.tool(title="Get Transcript", annotations=ToolAnnotations(title="Get Transcript", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
@@ -1970,75 +1972,75 @@ def create_server(state: Optional[MockState] = None) -> MCPServer:
         limit: int = 100,
         include_words: bool = False,
     ) -> dict:
-        """Read a page or time range of the full source-video transcript. start_ms and end_ms are in milliseconds; the returned segments' start and end are in seconds. New renders store this artifact; older projects may lack it."""
+        """Read a page or time range of the full source-video transcript. start_ms and end_ms are in milliseconds; the returned segments' start and end are in seconds. New renders store this artifact; older projects may lack it. Read-only: changes nothing and uses no credits."""
         return _call(state, state.get_transcript, project_id, start_ms, end_ms, offset, limit, include_words)
 
     @server.tool(title="Get Brand", annotations=ToolAnnotations(title="Get Brand", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def get_brand() -> dict:
-        """Read the workspace's default brand template: its logo (corner, size, opacity) and caption default. The FrameOS web app can save several brand templates, each with its own format and content type; videos submitted here render with the default one, or with no template when none is set as the default (then the brand is empty)."""
+        """Read the workspace's default brand template: its logo (corner, size, opacity) and, on paid plans, its caption default. On paid plans, videos submitted here use that logo, caption default and content type (the shape comes from aspect_ratio); with no default, or on the free plan, no template is applied. Read-only: changes nothing and uses no credits. logoUrl is a signed URL that expires in about an hour and works for anyone who has it."""
         return _call(state, state.get_brand)
 
     @server.tool(title="Export Clip", annotations=ToolAnnotations(title="Export Clip", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
     async def export_clip(clip_id: str, style: str | None = None, filename: str | None = None) -> dict:
-        """Get a captioned MP4 download. May start an export job; poll get_job, then call again for its URL. A call while that job is still running returns the same job."""
+        """Export a clip as a captioned MP4 and return a signed download link (it expires in about an hour and works for anyone who has it). If that file isn't rendered yet, this starts an export job that saves a new MP4 in FrameOS storage: poll get_job, then call again for the link. A call while that job is still running returns the same job. Uses no credits and never changes the clip; style and filename apply to this download only."""
         return _call(state, state.export_clip, clip_id, style, filename)
 
     @server.tool(title="Duplicate Clip", annotations=ToolAnnotations(title="Duplicate Clip", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
     async def duplicate_clip(clip_id: str) -> dict:
-        """Create a separate clip record using the same rendered media, without charging or re-rendering."""
+        """Create a separate clip record using the same rendered media, without charging or re-rendering: the copy appears in the same project with (Copy) added to its title, and the original is unchanged. Each call adds another copy, so a retry after success leaves an extra clip."""
         return _call(state, state.duplicate_clip, clip_id)
 
     @server.tool(title="List Collections", annotations=ToolAnnotations(title="List Collections", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def list_collections() -> list[dict]:
-        """List clip collections in the connected FrameOS workspace."""
+        """List clip collections in the connected FrameOS workspace, newest first, with each one's id, name, creation time and clip count. Read-only: changes nothing and uses no credits."""
         return _call(state, state.list_collections)
 
-    @server.tool(title="Create Collection", annotations=ToolAnnotations(title="Create Collection", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
+    @server.tool(title="Create Collection", annotations=ToolAnnotations(title="Create Collection", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def create_collection(name: str) -> dict:
-        """Create a named workspace collection for organizing clips."""
+        """Create a named workspace collection for organizing clips (name 1 to 120 characters, unique in the workspace); it starts empty and uses no credits. A name already in use is refused and nothing new is created, so a repeat call changes nothing; use list_collections to find it. Collections can't be renamed or deleted here."""
         return _call(state, state.create_collection, name)
 
     @server.tool(title="Add Clip To Collection", annotations=ToolAnnotations(title="Add Clip To Collection", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def add_clip_to_collection(collection_id: str, clip_id: str) -> dict:
-        """Add an owned clip to an owned collection; repeated calls do not create duplicates."""
+        """Add an owned clip to an owned collection; repeated calls do not create duplicates (added is false if it was already there). The clip itself is not changed and no credits are used. Clips can't be removed from a collection here, and export_collection only exports collections of up to 50 clips."""
         return _call(state, state.add_clip_to_collection, collection_id, clip_id)
 
     @server.tool(title="List Clips In Collection", annotations=ToolAnnotations(title="List Clips In Collection", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def list_clips_in_collection(collection_id: str) -> list[dict]:
-        """List clips in a workspace collection with fresh preview URLs."""
+        """List clips in a workspace collection, in the order they were added, with fresh preview URLs. If exportRequired is true, call export_clip for the captioned download. Read-only: changes nothing and uses no credits. Media links are signed URLs that expire in about an hour and work for anyone who has them."""
         return _call(state, state.list_clips_in_collection, collection_id)
 
     @server.tool(title="Export Collection", annotations=ToolAnnotations(title="Export Collection", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
     async def export_collection(collection_id: str) -> dict:
-        """Get captioned export URLs or export job IDs for up to 50 clips in a collection. Each call keeps at most 10 clips rendering; clips with status not_started need another call once those finish. A clip already rendering returns its running job."""
+        """Export each clip in a collection (up to 50; larger collections are refused) as a captioned MP4 in its saved style. Ready clips return signed download links (about an hour); the others start export jobs that save new MP4s in FrameOS storage. Each call keeps at most 10 clips rendering; clips with status not_started need another call once those finish. A clip already rendering returns its running job. Uses no credits and never changes the clips."""
         return _call(state, state.export_collection, collection_id)
 
     @server.tool(title="Create Upload Link", annotations=ToolAnnotations(title="Create Upload Link", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
     async def create_upload_link(filename: str, content_type: str = "video/mp4") -> dict:
-        """Get a one-hour signed PUT URL for a video file; upload bytes, then call submit_uploaded_video."""
+        """Create a one-hour signed PUT URL for a video file: each call opens a new, empty slot in this workspace's private FrameOS storage and returns upload_url and gs_path. Upload the bytes to upload_url, then call submit_uploaded_video with gs_path. Uses no credits and can't overwrite existing files; anyone holding upload_url can upload to that slot until it expires."""
         return _call(state, state.create_upload_link, filename, content_type)
 
-    @server.tool(title="Submit Uploaded Video", annotations=ToolAnnotations(title="Submit Uploaded Video", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
+    @server.tool(title="Submit Uploaded Video", annotations=ToolAnnotations(title="Submit Uploaded Video", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False))
     async def submit_uploaded_video(
         gs_path: str,
         max_clips: int = 3,
-        aspect_ratio: Literal["9:16", "3:4", "4:5", "1:1", "16:9"] = "9:16",
+        aspect_ratio: Literal["9:16", "3:4", "4:5", "1:1", "4:3", "16:9"] = "9:16",
         focus_prompt: str | None = None,
     ) -> dict:
-        """Start clipping an uploaded file using the gs_path from create_upload_link. Consumes credits. focus_prompt is an optional steer; only its first 400 characters are used."""
+        """Start clipping a file from create_upload_link by its gs_path: starts a render job (poll get_job). Spends 1 credit per source minute, rounded up, once the clips are saved; not refunded, and a failed run costs nothing. Once it succeeds FrameOS deletes the uploaded file (clips stay), so the gs_path can't be reused. A repeat while it renders returns its job; after a failed, stopped or stalled run it re-runs that project, replacing its settings. A refused start still leaves a failed project. focus_prompt is an optional steer; only its first 400 characters are used."""
         return _call(state, state.submit_uploaded_video, gs_path, max_clips, aspect_ratio, focus_prompt)
 
-    @server.tool(title="Set Caption Style", annotations=ToolAnnotations(title="Set Caption Style", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False))
+    @server.tool(title="Set Caption Style", annotations=ToolAnnotations(title="Set Caption Style", readOnlyHint=False, destructiveHint=True, idempotentHint=True, openWorldHint=False))
     async def set_caption_style(clip_id: str, style: str, appearance: dict | None = None) -> dict:
-        """Change the saved overlay caption style and optional appearance; export uses the new look."""
+        """Change an overlay clip's saved caption style and optional appearance (font, scale, yPct, anim); export uses the new look. This overwrites the saved style, and leaving out appearance clears earlier appearance overrides; the old settings are not kept. Nothing is rendered and no credits are used. A burned-caption clip is refused: use recaption_clip."""
         return _call(state, state.set_caption_style, clip_id, style, appearance)
 
     @server.tool(title="Recaption Clip", annotations=ToolAnnotations(title="Recaption Clip", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False))
     async def recaption_clip(clip_id: str, style: str, appearance: dict | None = None) -> dict:
-        """Change a clip's caption style. An older burned-caption clip is re-rendered: you get a job to poll with get_job. For an overlay clip the style is saved right away and there is no job (job_id is null); export_clip renders it."""
+        """Change a clip's caption style; uses no credits. An older burned-caption clip is re-rendered: you get a job to poll with get_job; when it finishes the clip's video is replaced by the new render and the clip switches to overlay captions, and a repeat call before then starts another re-render. For an overlay clip the style is saved right away, overwriting the old one (leaving out appearance clears earlier overrides), and there is no job (job_id is null); export_clip renders it."""
         return _call(state, state.recaption_clip, clip_id, style, appearance)
 
-    @server.tool(title="Create Thumbnail Job", annotations=ToolAnnotations(title="Create Thumbnail Job", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=True))
+    @server.tool(title="Create Thumbnail Job", annotations=ToolAnnotations(title="Create Thumbnail Job", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=True))
     async def create_thumbnail_job(
         clip_id: str | None = None,
         video_id: str | None = None,
@@ -2048,23 +2050,23 @@ def create_server(state: Optional[MockState] = None) -> MCPServer:
         aspect: Literal["auto", "16:9", "9:16", "1:1", "4:5", "3:4"] = "auto",
         style_ref: str = "",
     ) -> dict:
-        """Generate 1 to 3 thumbnails (max_thumbnails, default 3; a larger number makes 3) from one source: clip_id, video_id, or a public http(s) video url. Use clip_id or video_id for media already in FrameOS; gs:// paths and local files are rejected. style_ref is an optional public http(s) link to an image whose look to match. Costs FrameOS credits; returns a job ID."""
+        """Generate 1 to 3 thumbnails (max_thumbnails, default 3; a larger number makes 3) from one source: clip_id or video_id for media already in FrameOS (video_id re-downloads that project's original; use clip_id for uploads), or a public http(s) video url; style_ref is an optional public image link to match. FrameOS downloads these links; gs:// paths and local files are rejected. Spends 10 credits per thumbnail made, when the job succeeds; not refunded, fewer are made if the balance is short, and a failed job costs nothing. Every call, retries included, is a new paid job. Returns a job ID for get_thumbnail_job."""
         return _call(state, state.create_thumbnail_job, clip_id, video_id, url, max_thumbnails, include_face,
                      aspect, style_ref)
 
     @server.tool(title="Get Thumbnail Job", annotations=ToolAnnotations(title="Get Thumbnail Job", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def get_thumbnail_job(job_id: str) -> dict:
-        """Check a thumbnail job's progress and result images."""
+        """Check a thumbnail job's progress and result images, using the job ID from create_thumbnail_job. Read-only and safe to poll: it never starts, changes or charges anything. Image links were signed when the job finished and expire in about an hour; list_thumbnails returns fresh ones."""
         return _call(state, state.get_job, job_id)
 
     @server.tool(title="List Thumbnails", annotations=ToolAnnotations(title="List Thumbnails", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def list_thumbnails(limit: int = 30) -> list[dict]:
-        """List generated thumbnails in the connected workspace."""
+        """List generated thumbnails in the connected workspace, newest first (limit 1 to 100, default 30), each with view and download links. Read-only: changes nothing and uses no credits. Media links are signed URLs that expire in about an hour and work for anyone who has them."""
         return _call(state, state.list_thumbnails, limit)
 
     @server.tool(title="List Social Accounts", annotations=ToolAnnotations(title="List Social Accounts", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def list_social_accounts() -> list[dict]:
-        """List social publishing accounts already connected to the FrameOS workspace."""
+        """List social publishing accounts already connected to the FrameOS workspace (YouTube, Facebook, Instagram, LinkedIn), with each account's id for post_clip and whether it needs reconnecting. Read-only: it doesn't connect, change or contact any account, and uses no credits."""
         return _call(state, state.list_social_accounts)
 
     @server.tool(title="Generate Social Copy", annotations=ToolAnnotations(title="Generate Social Copy", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
@@ -2073,7 +2075,7 @@ def create_server(state: Optional[MockState] = None) -> MCPServer:
         platform: Literal["youtube", "instagram", "facebook", "linkedin", "tiktok", "x"],
         tone: str = "clear and natural",
     ) -> dict:
-        """Draft title, caption, and hashtags from a clip transcript using the configured model; does not post or charge credits."""
+        """Draft a title, caption and hashtags for one clip from its transcript. Read-only: it only returns the draft; nothing is saved or posted and no credits are used. To write it, FrameOS sends the clip's title, transcript and tone to a third-party AI provider; wording can differ between calls. Each workspace gets 30 drafts an hour, retries and failed attempts included. A clip with no transcript is refused; post_clip can't publish to TikTok or X."""
         return _call(state, state.generate_social_copy, clip_id, platform, tone)
 
     @server.tool(title="Post Clip", annotations=ToolAnnotations(title="Post Clip", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=True))
@@ -2084,7 +2086,7 @@ def create_server(state: Optional[MockState] = None) -> MCPServer:
         description: str = "",
         privacy: Literal["public", "unlisted", "private"] = "public",
     ) -> dict:
-        """Start publishing a clip to a connected social account. Returns a job ID: poll get_job, and when it completes its message is the public post URL. privacy is honoured on YouTube only: on Facebook, private uploads the video unpublished and unlisted posts it publicly; Instagram and LinkedIn posts are always public. A blank title uses the clip's own title. Call only when the user explicitly asks to publish."""
+        """Publish a clip as a new post on a connected social account. Call only when the user explicitly asks to publish: once started it can't be cancelled or taken down from FrameOS. Returns a job ID: poll get_job; when it completes its message is the public post URL. Every call posts again: don't retry, even after a timeout or failed job, until the user checks the account. privacy (default public) is honoured on YouTube only (uploads are marked not made for kids): on Facebook, private uploads the video unpublished and unlisted posts it publicly; Instagram and LinkedIn posts are always public."""
         return _call(state, state.post_clip, clip_id, account_id, title, description, privacy)
 
     server.mock_state = state  # type: ignore[attr-defined]

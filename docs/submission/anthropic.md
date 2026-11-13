@@ -70,7 +70,7 @@ Post my best clip to my YouTube channel as private.
 
 - **Primary use cases:** turn a long recording into ranked, captioned short clips; restyle captions and export MP4s; make thumbnails from real frames; draft titles and captions; post a clip to a connected account after the user confirms.
 - **Prerequisites:** a FrameOS account. New clips and thumbnails need FrameOS credits; browsing, exports, caption changes, copy drafts and posting don't. Posting needs a social account connected in the FrameOS web app.
-- **Reads or writes:** both. 15 tools only read; 12 change something (they start renders, save caption styles, create collections or post), and `post_clip`, `set_caption_style` and `recaption_clip` are marked destructive.
+- **Reads or writes:** both. 15 tools only read; 12 change something (they start renders, save caption styles, create collections or post). Six are marked destructive: `submit_video`, `submit_uploaded_video` and `create_thumbnail_job` spend credits that are never refunded, `set_caption_style` and `recaption_clip` overwrite a clip's captions, and `post_clip` publishes.
 
 ### Data handling step
 

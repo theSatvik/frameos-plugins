@@ -31,7 +31,7 @@ The sign-in server (Clerk OAuth) is set up for agent sign-in, with one limit:
 - The connector's sign-in server entry no longer has a trailing slash, so it matches Clerk's `issuer` exactly.
 - A `421 Invalid Host` error, caused by Cloud Run serving the connector under two hostnames, was fixed in production, and the deploy workflow now sets both hostnames on every deploy (merged and deployed 2026-10-05).
 - Error details reach the agent. Tools now raise the MCP SDK's `ToolError`, so the agent sees `FrameOS returned HTTP <code>: <detail>` instead of only `Error executing tool <name>`.
-- Every tool has a `title` and sets `readOnlyHint`, `destructiveHint` and `openWorldHint` explicitly. `post_clip` is marked destructive.
+- Every tool has a `title` and sets `readOnlyHint`, `destructiveHint` and `openWorldHint` explicitly. Since 2026-11-14 six tools are marked destructive: `submit_video`, `submit_uploaded_video` and `create_thumbnail_job` spend credits that are never refunded, `set_caption_style` and `recaption_clip` overwrite a clip's captions, and `post_clip` publishes.
 
 ## Prerequisites before every host can connect
 

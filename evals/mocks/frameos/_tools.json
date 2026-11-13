@@ -2,13 +2,13 @@
   "tools": [
     {
       "annotations": {
-        "destructiveHint": false,
+        "destructiveHint": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
         "title": "Submit Video"
       },
-      "description": "Submit a video URL for AI clipping. Starts a credit-consuming render job and returns its job ID. focus_prompt is an optional steer; only its first 400 characters are used.",
+      "description": "Submit a public video link for AI clipping: FrameOS downloads it and starts a render job (poll get_job). Spends 1 credit per source minute, rounded up, once the clips are saved; not refunded, and a failed run costs nothing. A link still rendering returns its job; one whose last run failed, stopped or stalled is re-run in that project, replacing its settings and, on success, its clips; a finished one makes a new project, charged again. A refused start still leaves a failed project. focus_prompt is an optional steer; only its first 400 characters are used.",
       "inputSchema": {
         "properties": {
           "source_url": {
@@ -27,6 +27,7 @@
               "3:4",
               "4:5",
               "1:1",
+              "4:3",
               "16:9"
             ],
             "title": "Aspect Ratio",
@@ -62,7 +63,7 @@
         "readOnlyHint": true,
         "title": "List Projects"
       },
-      "description": "List clipping projects owned by the connected FrameOS account.",
+      "description": "List clipping projects owned by the connected FrameOS account, newest first (limit up to 50, offset to page), with each one's status, progress and clip count. Read-only: changes nothing and uses no credits.",
       "inputSchema": {
         "properties": {
           "limit": {
@@ -107,7 +108,7 @@
         "readOnlyHint": true,
         "title": "Get Project"
       },
-      "description": "Get the status and summary of one FrameOS clipping project.",
+      "description": "Get the status and summary of one FrameOS clipping project: status, progress, source link and clip count. Read-only: changes nothing and uses no credits.",
       "inputSchema": {
         "properties": {
           "project_id": {
@@ -132,7 +133,7 @@
         "readOnlyHint": true,
         "title": "Get Job"
       },
-      "description": "Check render progress using the job ID returned by submit_video.",
+      "description": "Check a job's progress using the job ID from submit_video, submit_uploaded_video, export_clip, export_collection, recaption_clip or post_clip: returns its state, progress, message, ETA and any result. Read-only and safe to poll: it never starts, changes or charges anything.",
       "inputSchema": {
         "properties": {
           "job_id": {
@@ -157,7 +158,7 @@
         "readOnlyHint": true,
         "title": "List Clips"
       },
-      "description": "List project clips. If exportRequired is true, call export_clip for the captioned download.",
+      "description": "List a project's clips: titles, scores, transcripts, timings and media links. If exportRequired is true, call export_clip for the captioned download. Read-only: changes nothing and uses no credits. Media links are signed URLs that expire in about an hour and work for anyone who has them.",
       "inputSchema": {
         "properties": {
           "project_id": {
@@ -199,7 +200,7 @@
         "readOnlyHint": true,
         "title": "Whoami"
       },
-      "description": "Identify the connected FrameOS user, workspace, plan, and credit balance.",
+      "description": "Identify the connected FrameOS user, workspace, plan, and credit balance. Read-only: changes nothing and uses no credits. The balance can be up to a minute old and doesn't subtract credits held for renders still running.",
       "inputSchema": {
         "properties": {},
         "type": "object",
@@ -216,7 +217,7 @@
         "readOnlyHint": true,
         "title": "Get Usage"
       },
-      "description": "Read the workspace's recent credit usage and current credit balance.",
+      "description": "Read the workspace's recent credit usage (its 10 newest charges from the last 30 days, plus 30-day totals) and current credit balance. Read-only: changes nothing and uses no credits. Preview images are signed URLs that expire in about an hour and work for anyone who has them.",
       "inputSchema": {
         "properties": {},
         "type": "object",
@@ -233,7 +234,7 @@
         "readOnlyHint": true,
         "title": "Describe Clip"
       },
-      "description": "Read one clip's title, score, transcript, aspect, preview, and export requirement.",
+      "description": "Read one clip's title, score, transcript, aspect, layout, preview, and export requirement. Read-only: changes nothing and uses no credits. Media links are signed URLs that expire in about an hour and work for anyone who has them.",
       "inputSchema": {
         "properties": {
           "clip_id": {
@@ -258,7 +259,7 @@
         "readOnlyHint": true,
         "title": "Get Transcript"
       },
-      "description": "Read a page or time range of the full source-video transcript. start_ms and end_ms are in milliseconds; the returned segments' start and end are in seconds. New renders store this artifact; older projects may lack it.",
+      "description": "Read a page or time range of the full source-video transcript. start_ms and end_ms are in milliseconds; the returned segments' start and end are in seconds. New renders store this artifact; older projects may lack it. Read-only: changes nothing and uses no credits.",
       "inputSchema": {
         "properties": {
           "project_id": {
@@ -315,7 +316,7 @@
         "readOnlyHint": true,
         "title": "Get Brand"
       },
-      "description": "Read the workspace's default brand template: its logo (corner, size, opacity) and caption default. The FrameOS web app can save several brand templates, each with its own format and content type; videos submitted here render with the default one, or with no template when none is set as the default (then the brand is empty).",
+      "description": "Read the workspace's default brand template: its logo (corner, size, opacity) and, on paid plans, its caption default. On paid plans, videos submitted here use that logo, caption default and content type (the shape comes from aspect_ratio); with no default, or on the free plan, no template is applied. Read-only: changes nothing and uses no credits. logoUrl is a signed URL that expires in about an hour and works for anyone who has it.",
       "inputSchema": {
         "properties": {},
         "type": "object",
@@ -332,7 +333,7 @@
         "readOnlyHint": false,
         "title": "Export Clip"
       },
-      "description": "Get a captioned MP4 download. May start an export job; poll get_job, then call again for its URL. A call while that job is still running returns the same job.",
+      "description": "Export a clip as a captioned MP4 and return a signed download link (it expires in about an hour and works for anyone who has it). If that file isn't rendered yet, this starts an export job that saves a new MP4 in FrameOS storage: poll get_job, then call again for the link. A call while that job is still running returns the same job. Uses no credits and never changes the clip; style and filename apply to this download only.",
       "inputSchema": {
         "properties": {
           "clip_id": {
@@ -381,7 +382,7 @@
         "readOnlyHint": false,
         "title": "Duplicate Clip"
       },
-      "description": "Create a separate clip record using the same rendered media, without charging or re-rendering.",
+      "description": "Create a separate clip record using the same rendered media, without charging or re-rendering: the copy appears in the same project with (Copy) added to its title, and the original is unchanged. Each call adds another copy, so a retry after success leaves an extra clip.",
       "inputSchema": {
         "properties": {
           "clip_id": {
@@ -406,7 +407,7 @@
         "readOnlyHint": true,
         "title": "List Collections"
       },
-      "description": "List clip collections in the connected FrameOS workspace.",
+      "description": "List clip collections in the connected FrameOS workspace, newest first, with each one's id, name, creation time and clip count. Read-only: changes nothing and uses no credits.",
       "inputSchema": {
         "properties": {},
         "type": "object",
@@ -435,12 +436,12 @@
     {
       "annotations": {
         "destructiveHint": false,
-        "idempotentHint": false,
+        "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": false,
         "title": "Create Collection"
       },
-      "description": "Create a named workspace collection for organizing clips.",
+      "description": "Create a named workspace collection for organizing clips (name 1 to 120 characters, unique in the workspace); it starts empty and uses no credits. A name already in use is refused and nothing new is created, so a repeat call changes nothing; use list_collections to find it. Collections can't be renamed or deleted here.",
       "inputSchema": {
         "properties": {
           "name": {
@@ -465,7 +466,7 @@
         "readOnlyHint": false,
         "title": "Add Clip To Collection"
       },
-      "description": "Add an owned clip to an owned collection; repeated calls do not create duplicates.",
+      "description": "Add an owned clip to an owned collection; repeated calls do not create duplicates (added is false if it was already there). The clip itself is not changed and no credits are used. Clips can't be removed from a collection here, and export_collection only exports collections of up to 50 clips.",
       "inputSchema": {
         "properties": {
           "collection_id": {
@@ -495,7 +496,7 @@
         "readOnlyHint": true,
         "title": "List Clips In Collection"
       },
-      "description": "List clips in a workspace collection with fresh preview URLs.",
+      "description": "List clips in a workspace collection, in the order they were added, with fresh preview URLs. If exportRequired is true, call export_clip for the captioned download. Read-only: changes nothing and uses no credits. Media links are signed URLs that expire in about an hour and work for anyone who has them.",
       "inputSchema": {
         "properties": {
           "collection_id": {
@@ -537,7 +538,7 @@
         "readOnlyHint": false,
         "title": "Export Collection"
       },
-      "description": "Get captioned export URLs or export job IDs for up to 50 clips in a collection. Each call keeps at most 10 clips rendering; clips with status not_started need another call once those finish. A clip already rendering returns its running job.",
+      "description": "Export each clip in a collection (up to 50; larger collections are refused) as a captioned MP4 in its saved style. Ready clips return signed download links (about an hour); the others start export jobs that save new MP4s in FrameOS storage. Each call keeps at most 10 clips rendering; clips with status not_started need another call once those finish. A clip already rendering returns its running job. Uses no credits and never changes the clips.",
       "inputSchema": {
         "properties": {
           "collection_id": {
@@ -562,7 +563,7 @@
         "readOnlyHint": false,
         "title": "Create Upload Link"
       },
-      "description": "Get a one-hour signed PUT URL for a video file; upload bytes, then call submit_uploaded_video.",
+      "description": "Create a one-hour signed PUT URL for a video file: each call opens a new, empty slot in this workspace's private FrameOS storage and returns upload_url and gs_path. Upload the bytes to upload_url, then call submit_uploaded_video with gs_path. Uses no credits and can't overwrite existing files; anyone holding upload_url can upload to that slot until it expires.",
       "inputSchema": {
         "properties": {
           "filename": {
@@ -586,13 +587,13 @@
     },
     {
       "annotations": {
-        "destructiveHint": false,
+        "destructiveHint": true,
         "idempotentHint": false,
         "openWorldHint": false,
         "readOnlyHint": false,
         "title": "Submit Uploaded Video"
       },
-      "description": "Start clipping an uploaded file using the gs_path from create_upload_link. Consumes credits. focus_prompt is an optional steer; only its first 400 characters are used.",
+      "description": "Start clipping a file from create_upload_link by its gs_path: starts a render job (poll get_job). Spends 1 credit per source minute, rounded up, once the clips are saved; not refunded, and a failed run costs nothing. Once it succeeds FrameOS deletes the uploaded file (clips stay), so the gs_path can't be reused. A repeat while it renders returns its job; after a failed, stopped or stalled run it re-runs that project, replacing its settings. A refused start still leaves a failed project. focus_prompt is an optional steer; only its first 400 characters are used.",
       "inputSchema": {
         "properties": {
           "gs_path": {
@@ -611,6 +612,7 @@
               "3:4",
               "4:5",
               "1:1",
+              "4:3",
               "16:9"
             ],
             "title": "Aspect Ratio",
@@ -641,12 +643,12 @@
     {
       "annotations": {
         "destructiveHint": true,
-        "idempotentHint": false,
+        "idempotentHint": true,
         "openWorldHint": false,
         "readOnlyHint": false,
         "title": "Set Caption Style"
       },
-      "description": "Change the saved overlay caption style and optional appearance; export uses the new look.",
+      "description": "Change an overlay clip's saved caption style and optional appearance (font, scale, yPct, anim); export uses the new look. This overwrites the saved style, and leaving out appearance clears earlier appearance overrides; the old settings are not kept. Nothing is rendered and no credits are used. A burned-caption clip is refused: use recaption_clip.",
       "inputSchema": {
         "properties": {
           "clip_id": {
@@ -689,7 +691,7 @@
         "readOnlyHint": false,
         "title": "Recaption Clip"
       },
-      "description": "Re-render captions on an older burned-caption clip; returns a job to poll.",
+      "description": "Change a clip's caption style; uses no credits. An older burned-caption clip is re-rendered: you get a job to poll with get_job; when it finishes the clip's video is replaced by the new render and the clip switches to overlay captions, and a repeat call before then starts another re-render. For an overlay clip the style is saved right away, overwriting the old one (leaving out appearance clears earlier overrides), and there is no job (job_id is null); export_clip renders it.",
       "inputSchema": {
         "properties": {
           "clip_id": {
@@ -726,13 +728,13 @@
     },
     {
       "annotations": {
-        "destructiveHint": false,
+        "destructiveHint": true,
         "idempotentHint": false,
         "openWorldHint": true,
         "readOnlyHint": false,
         "title": "Create Thumbnail Job"
       },
-      "description": "Generate 1 to 3 thumbnails (max_thumbnails, default 3; a larger number makes 3) from one source: clip_id, video_id, or a public http(s) video url. Use clip_id or video_id for media already in FrameOS; gs:// paths and local files are rejected. style_ref is an optional public http(s) link to an image whose look to match. Costs FrameOS credits; returns a job ID.",
+      "description": "Generate 1 to 3 thumbnails (max_thumbnails, default 3; a larger number makes 3) from one source: clip_id or video_id for media already in FrameOS (video_id re-downloads that project's original; use clip_id for uploads), or a public http(s) video url; style_ref is an optional public image link to match. FrameOS downloads these links; gs:// paths and local files are rejected. Spends 10 credits per thumbnail made, when the job succeeds; not refunded, fewer are made if the balance is short, and a failed job costs nothing. Every call, retries included, is a new paid job. Returns a job ID for get_thumbnail_job.",
       "inputSchema": {
         "properties": {
           "clip_id": {
@@ -807,7 +809,7 @@
         "readOnlyHint": true,
         "title": "Get Thumbnail Job"
       },
-      "description": "Check a thumbnail job's progress and result images.",
+      "description": "Check a thumbnail job's progress and result images, using the job ID from create_thumbnail_job. Read-only and safe to poll: it never starts, changes or charges anything. Image links were signed when the job finished and expire in about an hour; list_thumbnails returns fresh ones.",
       "inputSchema": {
         "properties": {
           "job_id": {
@@ -832,7 +834,7 @@
         "readOnlyHint": true,
         "title": "List Thumbnails"
       },
-      "description": "List generated thumbnails in the connected workspace.",
+      "description": "List generated thumbnails in the connected workspace, newest first (limit 1 to 100, default 30), each with view and download links. Read-only: changes nothing and uses no credits. Media links are signed URLs that expire in about an hour and work for anyone who has them.",
       "inputSchema": {
         "properties": {
           "limit": {
@@ -872,7 +874,7 @@
         "readOnlyHint": true,
         "title": "List Social Accounts"
       },
-      "description": "List social publishing accounts already connected to the FrameOS workspace.",
+      "description": "List social publishing accounts already connected to the FrameOS workspace (YouTube, Facebook, Instagram, LinkedIn), with each account's id for post_clip and whether it needs reconnecting. Read-only: it doesn't connect, change or contact any account, and uses no credits.",
       "inputSchema": {
         "properties": {},
         "type": "object",
@@ -906,7 +908,7 @@
         "readOnlyHint": true,
         "title": "Generate Social Copy"
       },
-      "description": "Draft title, caption, and hashtags from a clip transcript using the configured model; does not post or charge credits.",
+      "description": "Draft a title, caption and hashtags for one clip from its transcript. Read-only: it only returns the draft; nothing is saved or posted and no credits are used. To write it, FrameOS sends the clip's title, transcript and tone to a third-party AI provider; wording can differ between calls. Each workspace gets 30 drafts an hour, retries and failed attempts included. A clip with no transcript is refused; post_clip can't publish to TikTok or X.",
       "inputSchema": {
         "properties": {
           "clip_id": {
@@ -949,7 +951,7 @@
         "readOnlyHint": false,
         "title": "Post Clip"
       },
-      "description": "Start publishing a clip to a connected social account. Returns a job ID: poll get_job, and when it completes its message is the public post URL. privacy is honoured on YouTube only: on Facebook, private uploads the video unpublished and unlisted posts it publicly; Instagram and LinkedIn posts are always public. A blank title uses the clip's own title. Call only when the user explicitly asks to publish.",
+      "description": "Publish a clip as a new post on a connected social account. Call only when the user explicitly asks to publish: once started it can't be cancelled or taken down from FrameOS. Returns a job ID: poll get_job; when it completes its message is the public post URL. Every call posts again: don't retry, even after a timeout or failed job, until the user checks the account. privacy (default public) is honoured on YouTube only (uploads are marked not made for kids): on Facebook, private uploads the video unpublished and unlisted posts it publicly; Instagram and LinkedIn posts are always public.",
       "inputSchema": {
         "properties": {
           "clip_id": {

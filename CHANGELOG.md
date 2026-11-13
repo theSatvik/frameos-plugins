@@ -12,6 +12,7 @@ All notable changes to the FrameOS plugin, skills and extension packages. The fo
 
 ### Changed
 
+- Synced with the FrameOS connector's safety-label update (connector 0.1.2, 2026-11-14), made after OpenAI's review found labels that didn't match the tools. `submit_video`, `submit_uploaded_video` and `create_thumbnail_job` are now marked destructive, because the credits they spend are never refunded; `set_caption_style` and `create_collection` are marked idempotent; every description now says what it spends, overwrites, posts or repeats on a retry; and the server instructions name the calls to confirm first. The tool snapshot, `evals/mocks/frameos/_tools.json`, the mock server (which also takes the 4:3 shape now) and the label table in `docs/submission/openai.md` follow it.
 - The setup skill no longer suggests `npx skills add`: an agent reading it already has the skills. The README and install guides still give it.
 - CI also runs `claude plugin validate --profile directory --strict plugins/frameos`, with the Claude Code CLI pinned to 2.1.318 (the version that has the directory profile and was used to check this release).
 - The upload-link wording in frameos-clip now says to keep the link out of replies rather than to hide it from the user.
