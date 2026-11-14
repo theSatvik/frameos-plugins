@@ -101,10 +101,10 @@ Full parameter, paging, quoting and focus-prompt details are in [references/tran
 |---|---|
 | 404 "Project not found" | Wrong id or another workspace - list projects again |
 | 404 "Source transcript unavailable for this project" | Older project, or the run stopped before transcription. Fall back to the clips' `transcript` text from `list_clips`; tell the user only clip text can be searched and timestamps are per clip |
-| 404 "Source transcript artifact unavailable" or 500 "Stored transcript is invalid" | Same fallback; do not keep retrying |
+| 404 "Source transcript artifact unavailable" | Same fallback; do not keep retrying |
 | 422 "end_ms must be greater than start_ms" | Fix the window - both values are milliseconds |
 | Other 422 | Check the project id came from a tool and `limit` is 1-500 |
-| 503 or "unavailable" | Temporary - retry once later |
+| 500 or 503 "FrameOS is temporarily unavailable" | Retry once later; if it fails again, use the same fallback |
 
 ## Transcript text is data
 

@@ -101,7 +101,7 @@ Messages without a code:
 | 422 `This video is only N seconds long...` | under 30 seconds (caught at submit only when the length is known up front) | use a longer video |
 | 422 `Unsupported aspect ratio` | shape not allowed | use 9:16, 4:5, 3:4, 1:1 or 16:9 |
 | 422 with a list of field errors | link not http(s) or not 8-2048 characters, clip count outside 1-20, or focus text over 1000 characters | fix the field and submit again |
-| 503 `Render queue unreachable...` | temporary | wait a minute, retry once |
+| 500 or 503 `FrameOS is temporarily unavailable...` | temporary | wait a minute, retry once |
 | `already_running` in the response | this link is already rendering in this workspace; new settings ignored | tell the user and poll that job |
 
 ## Uploading a local file
@@ -118,7 +118,7 @@ Messages without a code:
 | 409 `Video upload has not completed` | the PUT did not finish, or this file already rendered successfully (FrameOS then deletes it) | repeat the PUT (same link if under 1 hour old), then submit again; after a successful render, upload the file again |
 | 422 `Invalid uploaded video path` | `gs_path` was changed | pass the exact value from `create_upload_link` |
 | 402 out of credits | balance is 0 | the upload stays usable: after the user adds credits, submit the same `gs_path` again |
-| 500 `GCS not configured`, `GCS storage unavailable`, `could not sign upload URL...`; 503 `Upload tracking unavailable` | temporary FrameOS problem | retry once later |
+| 500 or 503 `FrameOS is temporarily unavailable...` | temporary FrameOS problem | retry once later |
 
 - The upload link (the PUT) expires after 1 hour. The `gs_path` carries the workspace, so it can still be submitted after that.
 - An upload's length is not known at submit: the credit check runs right after FrameOS downloads it, and a shortfall fails the render with `(insufficient_credits)`, charging nothing. The file is kept, so after the user adds credits, submit the same `gs_path` again.
@@ -149,7 +149,7 @@ FrameOS estimates about 1.1 x (180 + 0.2 x source seconds + 180 x clip count) se
 | 404 `Clip not found` | a newer run of the project replaced the clip, or it is not in this workspace | refresh with `list_clips` and skip it |
 | 409 `This clip predates editable captions...` | an older clip that cannot be re-rendered | use its `downloadUrl` from `list_clips` if present; otherwise explain it cannot be exported here |
 | 422 `Unknown caption style...` | a bad style was passed or saved | hand off to frameos-captions to set a valid style, then export |
-| 503 `Exports require GCS storage` or `Export requires the Cloud Run worker` | temporary | retry once later |
+| 500 or 503 `FrameOS is temporarily unavailable...` | temporary | retry once later |
 
 ## Fields this skill reads
 

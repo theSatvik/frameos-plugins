@@ -64,6 +64,8 @@ WEBSITE_URL = "https://frameos.studio/plugin"
 ICON_URL = "https://frameos.studio/frameos/frameos-favicon.png"
 # The real server adds this sentence to every 402 (a short credit balance).
 PRICING_SUFFIX = " Plans and credits are described at https://frameos.studio/pricing."
+# ...and this sentence in place of any 5xx detail (it logs the detail instead).
+SERVER_ERROR = "FrameOS is temporarily unavailable. Try again in a minute."
 
 # Launch guardrail messages, verbatim from the backend: core/credits.py
 # (SHORTFALL_AT_SUBMIT, SHORTFALL_AFTER_DOWNLOAD) and api/mcp_routes.py
@@ -1930,6 +1932,8 @@ def _call(state: MockState, fn: Callable[..., Any], *args: Any) -> Any:
         result = fn(*args)
     except FrameOSHTTPError as exc:
         text = f"FrameOS returned HTTP {exc.status}: {str(exc.detail)[:300]}"
+        if exc.status >= 500:  # like the real server: the code, never the raw detail
+            text = f"FrameOS returned HTTP {exc.status}: {SERVER_ERROR}"
         if exc.status == 402:
             text += PRICING_SUFFIX
         if state.config.errors == "opaque":

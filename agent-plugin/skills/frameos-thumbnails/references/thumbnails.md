@@ -74,7 +74,6 @@ When `state` is `completed`, `result` contains:
   - `reason` - one sentence on why this design was chosen
   - `template` - internal design name (do not show it unless asked)
   - `width`, `height` - pixel size
-  - a relative fit score (internal; do not show it)
 - `title` - the headline idea in one line; also a decent video title suggestion
 - `hook` - the headline pieces: `topic`, `kicker` (small line above), `line1`, `line2` (the big text), and a short rationale
 

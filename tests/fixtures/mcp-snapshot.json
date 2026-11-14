@@ -1018,5 +1018,5 @@
       }
     ]
   },
-  "_source": "FrameOS-Backend mcp_server/frameos_mcp/server.py sha256 8926be5b66480b1696d2edd6780645028e486326ad79c20f624ee9553b85d0c5 (branch claude/openai-presubmit-fixes off main 7091db5, PR #142, captured 2026-11-15)"
+  "_source": "FrameOS-Backend mcp_server/frameos_mcp/server.py sha256 c9d7ac1d60630305f80b2b70be1db936c612974dec6e6c4851ad7e1960678aa8 (branch claude/openai-presubmit-fixes off main 7091db5, PR #142, captured 2026-11-15)"
 }
