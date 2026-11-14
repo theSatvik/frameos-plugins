@@ -100,11 +100,11 @@ The Cursor and VS Code snippets follow those hosts' documented formats but have 
 
 ## Error triggers
 
-Errors surface as tool errors with the real server's text, `FrameOS returned HTTP <code>: <detail>`. The MCP SDK puts `Error executing tool <name>: ` in front of it. Like the real server, every 402 ends with ` You can add credits or change plans at https://frameos.studio/pricing.`
+Errors surface as tool errors with the real server's text, `FrameOS returned HTTP <code>: <detail>`. The MCP SDK puts `Error executing tool <name>: ` in front of it. Like the real server, every 402 ends with ` Plans and credits are described at https://frameos.studio/pricing.`
 
 | Trigger | Result |
 |---|---|
-| `FRAMEOS_MOCK_CREDITS=0` | `submit_video` / `submit_uploaded_video`: 402 `Out of credits. Upgrade your plan or add credits to keep processing.` The project is marked `failed` with that message plus `(insufficient_credits)`. Thumbnails return 402 below 10 credits. |
+| `FRAMEOS_MOCK_CREDITS=0` | `submit_video` / `submit_uploaded_video`: 402 `Out of credits. This workspace has no credits left to process this video.` The project is marked `failed` with that message plus `(insufficient_credits)`. Thumbnails return 402 below 10 credits. |
 | A balance below the video's length (see `FRAMEOS_MOCK_GUARDRAILS`) | Vimeo links: 402 `This video is N minutes long and needs N credits, but your workspace has M. Add credits or use a shorter video.` at submit. YouTube links and uploads: the render fails right after download with `... Nothing was charged. (insufficient_credits)`, and a resubmit of the same source then gets the 402 at submit. |
 | Source URL containing `too-short` | 422 `This video is only 12 seconds long, which is too short to pull a highlight out of. ...` The project is left `failed` with `(source_too_short)`. |
 | Source URL containing `no-clips` | The render job fails at the scoring step with the real `(no_clips_found)` message, and no credits are charged. |

@@ -8,5 +8,6 @@ expect:
   "url": "https://www.youtube.com/watch?v=8xL3pQz1mVw",
   "filename": "Episode 112 - Why we killed our free plan",
   "clips_count": 3,
-  "progress": 1.0
+  "progress": 1.0,
+  "uploadedFile": false
 }

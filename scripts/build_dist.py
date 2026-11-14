@@ -203,6 +203,13 @@ def openai_skill_text(rel_path: str, text: str) -> str:
                       "- Install the plugin: open the Plugins directory (`/plugins` in the TUI, or Plugins in the app), "
                       "search for FrameOS and add it. Plugin skills and tools load in a new session.\n", text)
         text = re.sub(r"(?m)^- Skills only, for agents that read SKILL\.md folders: .*\n", "", text)
+        # This copy is the directory plugin itself: ChatGPT installs it from Plugins,
+        # with no developer-mode setup, and gets tool updates through OpenAI's scans
+        # rather than a manual Refresh.
+        text = re.sub(r"(?m)^- Install: once FrameOS is listed in the ChatGPT Plugin Directory, .*\n"
+                      r"(?:- (?:Requirements|Set up|Use it): .*\n)*",
+                      "- Install: open https://chatgpt.com/plugins, search for FrameOS, add it and sign in.\n", text)
+        text = text.replace(" After FrameOS updates its tools, use Refresh on the app's details page.", "")
         return _keep_sections(text, OPENAI_HOST_SECTIONS, "This copy covers ChatGPT and Codex. " + OTHER_APPS_LINE)
     if rel_path == "skills/frameos-setup/SKILL.md":
         text = re.sub(r"(?m)^1\. Identify the app: .*$",

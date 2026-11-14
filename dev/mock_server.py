@@ -51,17 +51,19 @@ INSTRUCTIONS = (
     "Create clips with submit_video (or create_upload_link, then submit_uploaded_video), poll get_job, then call list_clips. "
     "Only submit_video, submit_uploaded_video and create_thumbnail_job spend credits (not refunded). "
     "Confirm with the user before those, before set_caption_style or recaption_clip (they overwrite a clip) and before post_clip (it publishes). "
-    "Use only projects the connected account owns."
+    "Use only projects the connected account owns, and only videos the user owns or has the rights to use. "
+    "post_clip posts right away; scheduling, timeline edits and connecting social accounts happen in the FrameOS web app at https://frameos.studio/dashboard. "
+    "Nothing can be bought here: if the user asks about credits or plans, or runs out, link https://frameos.studio/pricing."
 )
 
 MOCK_HOST = "https://mock.frameos.invalid"
 
 # The real server's identity (mcp_server/frameos_mcp/server.py), verbatim.
-SERVER_VERSION = "0.1.2"
+SERVER_VERSION = "0.1.3"
 WEBSITE_URL = "https://frameos.studio/plugin"
 ICON_URL = "https://frameos.studio/frameos/frameos-favicon.png"
 # The real server adds this sentence to every 402 (a short credit balance).
-PRICING_SUFFIX = " You can add credits or change plans at https://frameos.studio/pricing."
+PRICING_SUFFIX = " Plans and credits are described at https://frameos.studio/pricing."
 
 # Launch guardrail messages, verbatim from the backend: core/credits.py
 # (SHORTFALL_AT_SUBMIT, SHORTFALL_AFTER_DOWNLOAD) and api/mcp_routes.py
@@ -377,6 +379,42 @@ class _SubmitUploadedVideo(BaseModel):
     max_clips: int = Field(default=3, ge=1, le=20)
     aspect_ratio: str = "9:16"
     focus_prompt: Optional[str] = Field(default=None, max_length=1000)
+
+
+# Sources an agent may see (mcp_routes._SHAREABLE_SOURCE): the link the user
+# gave, or a recipe's name. An uploaded file's storage path is never shown.
+_SHAREABLE_SOURCE = ("http://", "https://", "recipe:")
+
+
+def _mcp_project(project: dict) -> dict:
+    """mcp_routes._mcp_project: list_projects calls the source "source",
+    get_project "url"; an upload shows uploadedFile instead of its gs:// path."""
+    result = dict(project)
+    uploaded = result.get("sourceType") == "file"
+    for key in ("source", "url"):
+        value = result.get(key)
+        if isinstance(value, str) and value and not value.startswith(_SHAREABLE_SOURCE):
+            result[key] = None
+            uploaded = True
+    result["uploadedFile"] = uploaded
+    return result
+
+
+def _mcp_job(job: dict) -> dict:
+    """mcp_routes._mcp_job: no raw start time, and no thumbnail scoring or
+    transcript-service name."""
+    result = dict(job)
+    result.pop("started_at_ms", None)
+    output = result.get("result")
+    if isinstance(output, dict):
+        output = dict(output)
+        if isinstance(output.get("hook"), dict):
+            output["hook"] = {k: v for k, v in output["hook"].items() if k not in ("source", "template_family")}
+        if isinstance(output.get("thumbnails"), list):
+            output["thumbnails"] = [{k: v for k, v in t.items() if k != "fit_score"} if isinstance(t, dict) else t
+                                    for t in output["thumbnails"]]
+        result["result"] = output
+    return result
 
 
 class _SignedUpload(BaseModel):
@@ -1250,7 +1288,7 @@ class MockState:
         hold = None
         try:
             if self._balance() <= 0:
-                raise FrameOSHTTPError(402, "Out of credits. Upgrade your plan or add credits to keep processing.")
+                raise FrameOSHTTPError(402, "Out of credits. This workspace has no credits left to process this video.")
             if self.config.guardrails and project.known_duration:
                 shortfall, hold = self._credit_shortfall(SHORTFALL_SUBMIT_MESSAGE, project, project.known_duration)
                 if shortfall:
@@ -1288,9 +1326,8 @@ class MockState:
 
     # ===== API surface (one method per MCP tool) ===============================
     def whoami(self) -> dict:
+        # Like /api/mcp/account: no user or workspace ids.
         return {
-            "user_id": self.user_id,
-            "organization_id": self.org_id,
             "organization_name": self.org_name,
             "account": {
                 "plan": self.config.plan,
@@ -1359,7 +1396,7 @@ class MockState:
             progress = p.progress
             if live is not None and p.status == "processing":
                 progress = max(progress, int(round(live["progress"] * 100)))
-            out.append({
+            out.append(_mcp_project({
                 "id": p.id, "title": p.title, "status": p.status, "progress": progress,
                 "etaRemainingSeconds": (live or {}).get("eta_remaining_seconds")
                 if p.status in ("processing", "pending") else None,
@@ -1369,14 +1406,14 @@ class MockState:
                 "createdAt": _iso(p.created_at),
                 "clipCount": sum(1 for c in self.clips.values() if c.video_id == p.id and not c.deleted),
                 "clips": [],
-            })
+            }))
         return out
 
     def get_project(self, project_id: str) -> dict:
         project = self._project(_path_uuid("project_id", project_id))
         if project.status in ("pending", "processing"):
             self._observe_project(project)
-        return self._video_response(project)
+        return _mcp_project(self._video_response(project))
 
     def get_job(self, job_id: str) -> dict:
         if job_id.startswith("thumb:"):
@@ -1402,7 +1439,7 @@ class MockState:
         job = self.jobs.get(job_id)
         if job is not None:
             self._advance(job, observe=True)
-        return self._job_view(job_id)
+        return _mcp_job(self._job_view(job_id))
 
     def get_transcript(self, project_id: str, start_ms: Any, end_ms: Any, offset: Any, limit: Any,
                        include_words: bool) -> dict:
@@ -1633,8 +1670,8 @@ class MockState:
         }
 
     # ----- uploads ----------------------------------------------------------------
-    def create_upload_link(self, filename: str, content_type: Optional[str]) -> dict:
-        payload = _body(_SignedUpload, {"filename": filename, "content_type": content_type})
+    def create_upload_link(self, filename: str) -> dict:
+        payload = _body(_SignedUpload, {"filename": filename})
         name = payload.filename or "upload.mp4"
         ext = name.rsplit(".", 1)[-1].lower() if "." in name else "mp4"
         ext = re.sub(r"[^a-z0-9]", "", ext)[:8] or "mp4"
@@ -1688,10 +1725,9 @@ class MockState:
 
     # ----- thumbnails -----------------------------------------------------------------
     def create_thumbnail_job(self, clip_id: Optional[str], video_id: Optional[str], url: str,
-                             max_thumbnails: int, include_face: bool, aspect: str, style_ref: str) -> dict:
+                             max_thumbnails: int, aspect: str, style_ref: str) -> dict:
         payload = _body(_Thumbnails, {"clip_id": clip_id, "video_id": video_id, "url": url,
-                                      "max_thumbnails": max_thumbnails, "include_face": include_face,
-                                      "aspect": aspect, "style_ref": style_ref})
+                                      "max_thumbnails": max_thumbnails, "aspect": aspect, "style_ref": style_ref})
         # Everything an agent types must be a public http(s) link: never a gs://
         # path or a local file. Stored media goes through clip_id or video_id.
         typed = {}
@@ -1726,8 +1762,8 @@ class MockState:
         n = max(1, min(THUMBNAIL_MAX, int(requested)))
         affordable = self._balance() // THUMBNAIL_CREDITS_PER
         if affordable < 1:
-            raise FrameOSHTTPError(402, f"Out of credits. Thumbnails cost {THUMBNAIL_CREDITS_PER} credits each; "
-                                        "add credits to continue.")
+            raise FrameOSHTTPError(402, f"Out of credits. Thumbnails cost {THUMBNAIL_CREDITS_PER} credits each, "
+                                        f"and this workspace has fewer than {THUMBNAIL_CREDITS_PER}.")
         n = min(n, int(affordable))
         aspect_key = (payload.aspect or "auto").strip().lower()
         if aspect_key not in THUMBNAIL_ASPECTS:
@@ -1925,7 +1961,7 @@ def create_server(state: Optional[MockState] = None) -> MCPServer:
         aspect_ratio: Literal["9:16", "3:4", "4:5", "1:1", "4:3", "16:9"] = "9:16",
         focus_prompt: str | None = None,
     ) -> dict:
-        """Submit a public video link for AI clipping: FrameOS downloads it and starts a render job (poll get_job). Spends 1 credit per source minute, rounded up, once the clips are saved; not refunded, and a failed run costs nothing. A link still rendering returns its job; one whose last run failed, stopped or stalled is re-run in that project, replacing its settings and, on success, its clips; a finished one makes a new project, charged again. A refused start still leaves a failed project. focus_prompt is an optional steer; only its first 400 characters are used."""
+        """Submit a public video link for AI clipping: FrameOS downloads it and starts a render job (poll get_job). Only for videos the user owns or has the rights to use. Spends 1 credit per source minute, rounded up, once the clips are saved; not refunded, and a failed run costs nothing. A link still rendering returns its job; one whose last run failed, stopped or stalled is re-run in that project, replacing its settings and, on success, its clips; a finished one makes a new project, charged again. A refused start still leaves a failed project. max_clips is 1 to 20 (default 3), an upper limit: a video with fewer strong moments can return fewer. focus_prompt is an optional steer of up to 1000 characters; only its first 400 characters are used."""
         return _call(state, state.submit_video, source_url, max_clips, aspect_ratio, focus_prompt)
 
     @server.tool(title="List Projects", annotations=ToolAnnotations(title="List Projects", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
@@ -1935,7 +1971,7 @@ def create_server(state: Optional[MockState] = None) -> MCPServer:
 
     @server.tool(title="Get Project", annotations=ToolAnnotations(title="Get Project", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def get_project(project_id: str) -> dict:
-        """Get the status and summary of one FrameOS clipping project: status, progress, source link and clip count. Read-only: changes nothing and uses no credits."""
+        """Get the status and summary of one FrameOS clipping project: status, progress, source link (null for an uploaded file) and clip count. Read-only: changes nothing and uses no credits."""
         return _call(state, state.get_project, project_id)
 
     @server.tool(title="Get Job", annotations=ToolAnnotations(title="Get Job", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
@@ -1950,7 +1986,7 @@ def create_server(state: Optional[MockState] = None) -> MCPServer:
 
     @server.tool(title="Whoami", annotations=ToolAnnotations(title="Whoami", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def whoami() -> dict:
-        """Identify the connected FrameOS user, workspace, plan, and credit balance. Read-only: changes nothing and uses no credits. The balance can be up to a minute old and doesn't subtract credits held for renders still running."""
+        """Show the connected FrameOS workspace's name, plan and credit balance. Read-only: changes nothing and uses no credits. The balance can be up to a minute old and doesn't subtract credits held for renders still running."""
         return _call(state, state.whoami)
 
     @server.tool(title="Get Usage", annotations=ToolAnnotations(title="Get Usage", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
@@ -1972,7 +2008,7 @@ def create_server(state: Optional[MockState] = None) -> MCPServer:
         limit: int = 100,
         include_words: bool = False,
     ) -> dict:
-        """Read a page or time range of the full source-video transcript. start_ms and end_ms are in milliseconds; the returned segments' start and end are in seconds. New renders store this artifact; older projects may lack it. Read-only: changes nothing and uses no credits."""
+        """Read a page or time range of the full source-video transcript. start_ms and end_ms are in milliseconds; the returned segments' start and end are in seconds. limit is up to 500 segments per page (default 100). New renders store this artifact; older projects may lack it. Read-only: changes nothing and uses no credits."""
         return _call(state, state.get_transcript, project_id, start_ms, end_ms, offset, limit, include_words)
 
     @server.tool(title="Get Brand", annotations=ToolAnnotations(title="Get Brand", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
@@ -2016,9 +2052,9 @@ def create_server(state: Optional[MockState] = None) -> MCPServer:
         return _call(state, state.export_collection, collection_id)
 
     @server.tool(title="Create Upload Link", annotations=ToolAnnotations(title="Create Upload Link", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
-    async def create_upload_link(filename: str, content_type: str = "video/mp4") -> dict:
+    async def create_upload_link(filename: str) -> dict:
         """Create a one-hour signed PUT URL for a video file: each call opens a new, empty slot in this workspace's private FrameOS storage and returns upload_url and gs_path. Upload the bytes to upload_url, then call submit_uploaded_video with gs_path. Uses no credits and can't overwrite existing files; anyone holding upload_url can upload to that slot until it expires."""
-        return _call(state, state.create_upload_link, filename, content_type)
+        return _call(state, state.create_upload_link, filename)
 
     @server.tool(title="Submit Uploaded Video", annotations=ToolAnnotations(title="Submit Uploaded Video", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False))
     async def submit_uploaded_video(
@@ -2027,7 +2063,7 @@ def create_server(state: Optional[MockState] = None) -> MCPServer:
         aspect_ratio: Literal["9:16", "3:4", "4:5", "1:1", "4:3", "16:9"] = "9:16",
         focus_prompt: str | None = None,
     ) -> dict:
-        """Start clipping a file from create_upload_link by its gs_path: starts a render job (poll get_job). Spends 1 credit per source minute, rounded up, once the clips are saved; not refunded, and a failed run costs nothing. Once it succeeds FrameOS deletes the uploaded file (clips stay), so the gs_path can't be reused. A repeat while it renders returns its job; after a failed, stopped or stalled run it re-runs that project, replacing its settings. A refused start still leaves a failed project. focus_prompt is an optional steer; only its first 400 characters are used."""
+        """Start clipping a file from create_upload_link by its gs_path: starts a render job (poll get_job). Spends 1 credit per source minute, rounded up, once the clips are saved; not refunded, and a failed run costs nothing. Once it succeeds FrameOS deletes the uploaded file (clips stay), so the gs_path can't be reused. A repeat while it renders returns its job; after a failed, stopped or stalled run it re-runs that project, replacing its settings. A refused start still leaves a failed project. max_clips is 1 to 20 (default 3), an upper limit: a video with fewer strong moments can return fewer. focus_prompt is an optional steer of up to 1000 characters; only its first 400 characters are used."""
         return _call(state, state.submit_uploaded_video, gs_path, max_clips, aspect_ratio, focus_prompt)
 
     @server.tool(title="Set Caption Style", annotations=ToolAnnotations(title="Set Caption Style", readOnlyHint=False, destructiveHint=True, idempotentHint=True, openWorldHint=False))
@@ -2046,13 +2082,11 @@ def create_server(state: Optional[MockState] = None) -> MCPServer:
         video_id: str | None = None,
         url: str = "",
         max_thumbnails: int = 3,
-        include_face: bool = False,
         aspect: Literal["auto", "16:9", "9:16", "1:1", "4:5", "3:4"] = "auto",
         style_ref: str = "",
     ) -> dict:
-        """Generate 1 to 3 thumbnails (max_thumbnails, default 3; a larger number makes 3) from one source: clip_id or video_id for media already in FrameOS (video_id re-downloads that project's original; use clip_id for uploads), or a public http(s) video url; style_ref is an optional public image link to match. FrameOS downloads these links; gs:// paths and local files are rejected. Spends 10 credits per thumbnail made, when the job succeeds; not refunded, fewer are made if the balance is short, and a failed job costs nothing. Every call, retries included, is a new paid job. Returns a job ID for get_thumbnail_job."""
-        return _call(state, state.create_thumbnail_job, clip_id, video_id, url, max_thumbnails, include_face,
-                     aspect, style_ref)
+        """Generate 1 to 3 thumbnails (max_thumbnails, default 3; a larger number makes 3) from one source: clip_id or video_id for media already in FrameOS (video_id re-downloads that project's original; use clip_id for uploads), or a public http(s) video url; style_ref is an optional public image link to match. FrameOS downloads these links; gs:// paths and local files are rejected. Only for videos the user owns or has the rights to use. Spends 10 credits per thumbnail made, when the job succeeds; not refunded, fewer are made if the balance is short, and a failed job costs nothing. Every call, retries included, is a new paid job. Returns a job ID for get_thumbnail_job."""
+        return _call(state, state.create_thumbnail_job, clip_id, video_id, url, max_thumbnails, aspect, style_ref)
 
     @server.tool(title="Get Thumbnail Job", annotations=ToolAnnotations(title="Get Thumbnail Job", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
     async def get_thumbnail_job(job_id: str) -> dict:
@@ -2075,7 +2109,7 @@ def create_server(state: Optional[MockState] = None) -> MCPServer:
         platform: Literal["youtube", "instagram", "facebook", "linkedin", "tiktok", "x"],
         tone: str = "clear and natural",
     ) -> dict:
-        """Draft a title, caption and hashtags for one clip from its transcript. Read-only: it only returns the draft; nothing is saved or posted and no credits are used. To write it, FrameOS sends the clip's title, transcript and tone to a third-party AI provider; wording can differ between calls. Each workspace gets 30 drafts an hour, retries and failed attempts included. A clip with no transcript is refused; post_clip can't publish to TikTok or X."""
+        """Draft a title, caption and hashtags for one clip from its transcript; tone is an optional steer of up to 100 characters. Read-only: it only returns the draft; nothing is saved or posted and no credits are used. To write it, FrameOS sends the clip's title, transcript and tone to a third-party AI provider; wording can differ between calls. Each workspace gets 30 drafts an hour, retries and failed attempts included. A clip with no transcript is refused; post_clip can't publish to TikTok or X."""
         return _call(state, state.generate_social_copy, clip_id, platform, tone)
 
     @server.tool(title="Post Clip", annotations=ToolAnnotations(title="Post Clip", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=True))

@@ -147,7 +147,7 @@ class FlowTest(unittest.IsolatedAsyncioTestCase):
         server, state = _new_server(credits=120)
         async with Client(server, mode="legacy") as client:
             me = await self.call(client, "whoami")
-            self.assertEqual(set(me), {"user_id", "organization_id", "organization_name", "account"})
+            self.assertEqual(set(me), {"organization_name", "account"})  # no user or workspace ids
             self.assertEqual(set(me["account"]), {"plan", "credits", "paid_credits", "trial_credits",
                                                   "trial_credits_expires_at", "trial_credits_expired"})
             self.assertEqual(me["account"]["credits"], 120)
@@ -165,8 +165,7 @@ class FlowTest(unittest.IsolatedAsyncioTestCase):
             seen = await self.poll(client, job["job_id"])
             self.assertEqual(len(seen), 3)  # default fast mode completes on the third poll
             self.assertEqual(set(seen[0]), {"id", "state", "progress", "message", "eta_seconds",
-                                            "eta_remaining_seconds", "started_at_ms",
-                                            "source_duration_seconds", "result"})
+                                            "eta_remaining_seconds", "source_duration_seconds", "result"})
             self.assertEqual(seen[0]["message"], "transcribing")
             self.assertIsInstance(seen[0]["eta_seconds"], int)
             self.assertTrue(all(0.0 <= v["progress"] <= 1.0 for v in seen))
@@ -219,14 +218,15 @@ class FlowTest(unittest.IsolatedAsyncioTestCase):
         async with Client(mock.create_server(state), mode="legacy") as client:
             self.assertEqual((await self.call(client, "whoami"))["account"]["credits"], 0)
             text = await self.error(client, "submit_video", source_url="https://www.youtube.com/watch?v=broke1")
-            self.assertIn("FrameOS returned HTTP 402: Out of credits. Upgrade your plan or add credits to keep "
-                          "processing. You can add credits or change plans at https://frameos.studio/pricing.", text)
+            self.assertIn("FrameOS returned HTTP 402: Out of credits. This workspace has no credits left to "
+                          "process this video. Plans and credits are described at https://frameos.studio/pricing.", text)
+            self.assertNotIn("pgrade", text)
             # The row made before the credit check is failed with the reason at once
             # (mcp_routes._settle_refused_row), not left pending for the 30-minute reaper.
             refused = (await self.call(client, "list_projects"))[0]
             self.assertEqual((refused["status"], refused["clipCount"]), ("failed", 0))
-            self.assertEqual(refused["errorMessage"], "Out of credits. Upgrade your plan or add credits to keep "
-                                                      "processing. (insufficient_credits)")
+            self.assertEqual(refused["errorMessage"], "Out of credits. This workspace has no credits left to "
+                                                      "process this video. (insufficient_credits)")
             view = await self.call(client, "get_job", job_id=f"clip:render:{refused['id']}")
             self.assertEqual((view["state"], view["message"]), ("pending", ""))  # no job was queued
             # Thumbnails need 10 credits each.
@@ -526,7 +526,7 @@ class FlowTest(unittest.IsolatedAsyncioTestCase):
         self.addCleanup(receiver.server_close)
         self.addCleanup(receiver.shutdown)
         async with Client(server, mode="legacy") as client:
-            org = (await self.call(client, "whoami"))["organization_id"]
+            org = state.org_id  # whoami no longer returns workspace ids
             link = await self.call(client, "create_upload_link", filename="Episode 12.mov")
             # gs://<bucket>/inputs/<workspace id>/<hex>.<ext>
             self.assertRegex(link["gs_path"], rf"^gs://{mock.BUCKET}/inputs/{org}/[0-9a-f]{{32}}\.mov$")
@@ -574,8 +574,9 @@ class FlowTest(unittest.IsolatedAsyncioTestCase):
             result = done[-1]["result"]
             self.assertEqual(len(result["thumbnails"]), 3)
             self.assertEqual({(t["width"], t["height"]) for t in result["thumbnails"]}, {(1280, 720)})
-            self.assertEqual(set(result["hook"]), {"topic", "kicker", "line1", "line2", "rationale", "source",
-                                                   "template_family"})
+            # No transcript-service name, template family or fit score reach the agent.
+            self.assertEqual(set(result["hook"]), {"topic", "kicker", "line1", "line2", "rationale"})
+            self.assertFalse(any("fit_score" in t for t in result["thumbnails"]))
             after = (await self.call(client, "whoami"))["account"]["credits"]
             self.assertEqual(before - after, 30)
             listed = await self.call(client, "list_thumbnails", limit=5)

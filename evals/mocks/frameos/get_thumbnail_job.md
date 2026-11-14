@@ -9,7 +9,6 @@ expect:
   "message": "",
   "eta_seconds": 120,
   "eta_remaining_seconds": 0,
-  "started_at_ms": 1759382345678,
   "source_duration_seconds": null,
   "result": {
     "thumbnails": [
@@ -19,7 +18,6 @@ expect:
         "template": "headline-left",
         "role": "primary",
         "reason": "Speaker mid-gesture with a clear eye line and space for the headline.",
-        "fit_score": 0.86,
         "width": 1080,
         "height": 1920
       },
@@ -29,7 +27,6 @@ expect:
         "template": "headline-bottom",
         "role": "alternate",
         "reason": "Tighter crop on the speaker; headline sits under the face.",
-        "fit_score": 0.79,
         "width": 1080,
         "height": 1920
       },
@@ -39,7 +36,6 @@ expect:
         "template": "split",
         "role": "alternate",
         "reason": "Two-shot of host and guest; works as a series cover.",
-        "fit_score": 0.71,
         "width": 1080,
         "height": 1920
       }
@@ -50,9 +46,7 @@ expect:
       "kicker": "PRICING",
       "line1": "WE KILLED",
       "line2": "OUR FREE PLAN",
-      "rationale": "The clip's strongest claim, short enough to read at phone size.",
-      "source": "transcript",
-      "template_family": "bold"
+      "rationale": "The clip's strongest claim, short enough to read at phone size."
     }
   }
 }

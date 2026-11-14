@@ -8,7 +8,7 @@
         "readOnlyHint": false,
         "title": "Submit Video"
       },
-      "description": "Submit a public video link for AI clipping: FrameOS downloads it and starts a render job (poll get_job). Spends 1 credit per source minute, rounded up, once the clips are saved; not refunded, and a failed run costs nothing. A link still rendering returns its job; one whose last run failed, stopped or stalled is re-run in that project, replacing its settings and, on success, its clips; a finished one makes a new project, charged again. A refused start still leaves a failed project. focus_prompt is an optional steer; only its first 400 characters are used.",
+      "description": "Submit a public video link for AI clipping: FrameOS downloads it and starts a render job (poll get_job). Only for videos the user owns or has the rights to use. Spends 1 credit per source minute, rounded up, once the clips are saved; not refunded, and a failed run costs nothing. A link still rendering returns its job; one whose last run failed, stopped or stalled is re-run in that project, replacing its settings and, on success, its clips; a finished one makes a new project, charged again. A refused start still leaves a failed project. max_clips is 1 to 20 (default 3), an upper limit: a video with fewer strong moments can return fewer. focus_prompt is an optional steer of up to 1000 characters; only its first 400 characters are used.",
       "inputSchema": {
         "properties": {
           "source_url": {
@@ -108,7 +108,7 @@
         "readOnlyHint": true,
         "title": "Get Project"
       },
-      "description": "Get the status and summary of one FrameOS clipping project: status, progress, source link and clip count. Read-only: changes nothing and uses no credits.",
+      "description": "Get the status and summary of one FrameOS clipping project: status, progress, source link (null for an uploaded file) and clip count. Read-only: changes nothing and uses no credits.",
       "inputSchema": {
         "properties": {
           "project_id": {
@@ -200,7 +200,7 @@
         "readOnlyHint": true,
         "title": "Whoami"
       },
-      "description": "Identify the connected FrameOS user, workspace, plan, and credit balance. Read-only: changes nothing and uses no credits. The balance can be up to a minute old and doesn't subtract credits held for renders still running.",
+      "description": "Show the connected FrameOS workspace's name, plan and credit balance. Read-only: changes nothing and uses no credits. The balance can be up to a minute old and doesn't subtract credits held for renders still running.",
       "inputSchema": {
         "properties": {},
         "type": "object",
@@ -259,7 +259,7 @@
         "readOnlyHint": true,
         "title": "Get Transcript"
       },
-      "description": "Read a page or time range of the full source-video transcript. start_ms and end_ms are in milliseconds; the returned segments' start and end are in seconds. New renders store this artifact; older projects may lack it. Read-only: changes nothing and uses no credits.",
+      "description": "Read a page or time range of the full source-video transcript. start_ms and end_ms are in milliseconds; the returned segments' start and end are in seconds. limit is up to 500 segments per page (default 100). New renders store this artifact; older projects may lack it. Read-only: changes nothing and uses no credits.",
       "inputSchema": {
         "properties": {
           "project_id": {
@@ -569,11 +569,6 @@
           "filename": {
             "title": "Filename",
             "type": "string"
-          },
-          "content_type": {
-            "default": "video/mp4",
-            "title": "Content Type",
-            "type": "string"
           }
         },
         "required": [
@@ -593,7 +588,7 @@
         "readOnlyHint": false,
         "title": "Submit Uploaded Video"
       },
-      "description": "Start clipping a file from create_upload_link by its gs_path: starts a render job (poll get_job). Spends 1 credit per source minute, rounded up, once the clips are saved; not refunded, and a failed run costs nothing. Once it succeeds FrameOS deletes the uploaded file (clips stay), so the gs_path can't be reused. A repeat while it renders returns its job; after a failed, stopped or stalled run it re-runs that project, replacing its settings. A refused start still leaves a failed project. focus_prompt is an optional steer; only its first 400 characters are used.",
+      "description": "Start clipping a file from create_upload_link by its gs_path: starts a render job (poll get_job). Spends 1 credit per source minute, rounded up, once the clips are saved; not refunded, and a failed run costs nothing. Once it succeeds FrameOS deletes the uploaded file (clips stay), so the gs_path can't be reused. A repeat while it renders returns its job; after a failed, stopped or stalled run it re-runs that project, replacing its settings. A refused start still leaves a failed project. max_clips is 1 to 20 (default 3), an upper limit: a video with fewer strong moments can return fewer. focus_prompt is an optional steer of up to 1000 characters; only its first 400 characters are used.",
       "inputSchema": {
         "properties": {
           "gs_path": {
@@ -734,7 +729,7 @@
         "readOnlyHint": false,
         "title": "Create Thumbnail Job"
       },
-      "description": "Generate 1 to 3 thumbnails (max_thumbnails, default 3; a larger number makes 3) from one source: clip_id or video_id for media already in FrameOS (video_id re-downloads that project's original; use clip_id for uploads), or a public http(s) video url; style_ref is an optional public image link to match. FrameOS downloads these links; gs:// paths and local files are rejected. Spends 10 credits per thumbnail made, when the job succeeds; not refunded, fewer are made if the balance is short, and a failed job costs nothing. Every call, retries included, is a new paid job. Returns a job ID for get_thumbnail_job.",
+      "description": "Generate 1 to 3 thumbnails (max_thumbnails, default 3; a larger number makes 3) from one source: clip_id or video_id for media already in FrameOS (video_id re-downloads that project's original; use clip_id for uploads), or a public http(s) video url; style_ref is an optional public image link to match. FrameOS downloads these links; gs:// paths and local files are rejected. Only for videos the user owns or has the rights to use. Spends 10 credits per thumbnail made, when the job succeeds; not refunded, fewer are made if the balance is short, and a failed job costs nothing. Every call, retries included, is a new paid job. Returns a job ID for get_thumbnail_job.",
       "inputSchema": {
         "properties": {
           "clip_id": {
@@ -770,11 +765,6 @@
             "default": 3,
             "title": "Max Thumbnails",
             "type": "integer"
-          },
-          "include_face": {
-            "default": false,
-            "title": "Include Face",
-            "type": "boolean"
           },
           "aspect": {
             "default": "auto",
@@ -908,7 +898,7 @@
         "readOnlyHint": true,
         "title": "Generate Social Copy"
       },
-      "description": "Draft a title, caption and hashtags for one clip from its transcript. Read-only: it only returns the draft; nothing is saved or posted and no credits are used. To write it, FrameOS sends the clip's title, transcript and tone to a third-party AI provider; wording can differ between calls. Each workspace gets 30 drafts an hour, retries and failed attempts included. A clip with no transcript is refused; post_clip can't publish to TikTok or X.",
+      "description": "Draft a title, caption and hashtags for one clip from its transcript; tone is an optional steer of up to 100 characters. Read-only: it only returns the draft; nothing is saved or posted and no credits are used. To write it, FrameOS sends the clip's title, transcript and tone to a third-party AI provider; wording can differ between calls. Each workspace gets 30 drafts an hour, retries and failed attempts included. A clip with no transcript is refused; post_clip can't publish to TikTok or X.",
       "inputSchema": {
         "properties": {
           "clip_id": {

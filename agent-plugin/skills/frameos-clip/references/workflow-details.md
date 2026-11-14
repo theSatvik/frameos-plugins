@@ -63,7 +63,7 @@ Link imports that will not fix themselves:
 |---|---|---|
 | `(source_members_only)` | members-only YouTube video | upload the file (YouTube Studio can download your own videos) |
 | `(source_requires_auth)` | the video needs a sign-in or is private | make it public, or upload the file |
-| `(source_cookies_invalid)` | FrameOS could not sign in to download it | upload the file |
+| `(source_cookies_invalid)` | the site refused the download | upload the file |
 | `(source_format_unavailable)` | no compatible version could be downloaded | upload the file |
 | `(unsupported_url)` | FrameOS cannot import from this site | upload the file |
 | `(not_direct_media)` | the link is not a video file or a supported video page | use the video's own page link, a direct file link, or upload |
@@ -77,7 +77,7 @@ Temporary (FrameOS may re-run these once by itself within about an hour - check 
 
 `(source_forbidden)`, `(source_bot_check)`, `(source_download_timeout)`, `(source_rate_limited)`, `(dns_failed)`, `(empty_download)`, `(direct_download_failed)`, `(google_drive_failed)`, `(download_failed)`, `(source_download_failed)`, `(cookie_fetch_failed)`, `(render_failed)`.
 
-If one of these is still `failed` after the automatic retry: for a link, suggest uploading the file directly (sites like YouTube sometimes block server downloads); otherwise suggest trying again later. Re-submitting a link whose last render failed re-runs that same project (it may reuse settings chosen for it earlier in the web app).
+If one of these is still `failed` after the automatic retry: for a link, suggest uploading the file directly (some sites block server downloads); otherwise suggest trying again later. Re-submitting a link whose last render failed re-runs that same project (it may reuse settings chosen for it earlier in the web app).
 
 Messages without a code:
 
@@ -107,7 +107,7 @@ Messages without a code:
 ## Uploading a local file
 
 1. Pre-checks with the shell: the file exists; its size (`ls -lh "/path/to/video.mp4"`); its duration in seconds if `ffprobe` is installed: `ffprobe -v error -show_entries format=duration -of csv=p=0 "/path/to/video.mp4"`. Under 30 seconds: do not submit. Credits: the minutes, rounded up.
-2. `create_upload_link` with `filename` = the real name with its extension (.mp4, .mov, .mkv, .webm ...). The stored file keeps that extension and the project is titled after it. `content_type` can stay at its default.
+2. `create_upload_link` with `filename` = the real name with its extension (.mp4, .mov, .mkv, .webm ...). The stored file keeps that extension and the project is titled after it.
 3. Send the bytes with one PUT. Quote the URL (it contains `&`). The Content-Type header is not checked, so `video/mp4` is fine for any video:
    `curl -sS --fail -X PUT -H "Content-Type: video/mp4" --upload-file "/path/to/video.mp4" "UPLOAD_URL"`
 4. `submit_uploaded_video` with the exact `gs_path` returned in step 2.
@@ -128,7 +128,7 @@ Messages without a code:
 
 ## Supported sources
 
-- YouTube, Vimeo, Twitch and Kick video links, and other sites FrameOS's downloader supports. YouTube sometimes blocks server downloads; uploading the file always avoids that.
+- YouTube, Vimeo, Twitch and Kick video links, and other sites FrameOS's downloader supports, for videos the user owns or has the rights to use. Some sites block server downloads; uploading the file always avoids that.
 - Public Google Drive files, shared as "Anyone with the link" (single files, not folders).
 - Direct video file URLs ending in .mp4, .m4v, .mov, .mkv, .webm, .avi, .mpeg or .mpg.
 - Not supported: links that need a sign-in, private or members-only videos, localhost and private or internal addresses.

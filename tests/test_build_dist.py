@@ -124,7 +124,10 @@ class BuildDistTest(fx.FixtureCase):
     def test_openai_zip_narrows_the_setup_skill(self) -> None:
         hosts = ("# Hosts\n\n- Server name used below: `frameos` (in Claude Code the plugin's copy is `plugin:frameos:frameos`)\n\n"
                  "## Claude Code (terminal)\n\n- `claude mcp list`\n\n## Codex (CLI and app)\n\n- `codex mcp list`\n\n"
-                 "## ChatGPT (web)\n\n- Plugins\n\n## Devin and Windsurf\n\n- `devin mcp login frameos`\n\n"
+                 "## ChatGPT (web)\n\n- Install: once FrameOS is listed in the ChatGPT Plugin Directory, open it. Until then, "
+                 "use developer mode.\n- Requirements: developer mode.\n- Set up: Settings > Developer mode.\n"
+                 "- Use it: + > Developer mode.\n- Is it connected: ask for the credit balance. After FrameOS updates its "
+                 "tools, use Refresh on the app's details page.\n\n## Devin and Windsurf\n\n- `devin mcp login frameos`\n\n"
                  "## Any other MCP client\n\n- Add the server.\n")
         self.write("skills/frameos-setup/references/hosts.md", hosts)
         setup = self.read("skills/frameos-setup/SKILL.md") + (
@@ -140,6 +143,11 @@ class BuildDistTest(fx.FixtureCase):
         self.assertEqual([line for line in got_hosts.splitlines() if line.startswith("## ")],
                          ["## Codex (CLI and app)", "## ChatGPT (web)", "## Any other MCP client"])
         self.assertIn("https://frameos.studio/plugin", got_hosts)
+        # The directory plugin installs from ChatGPT's Plugins: no developer-mode steps.
+        self.assertIn("- Install: open https://chatgpt.com/plugins, search for FrameOS, add it and sign in.\n"
+                      "- Is it connected: ask for the credit balance.\n", got_hosts)
+        self.assertNotIn("eveloper mode", got_hosts)
+        self.assertNotIn("Refresh", got_hosts)
         got_setup = data["skills/frameos-setup/SKILL.md"].decode()
         self.assertIn("1. Identify the app: ChatGPT, Codex or another MCP client.", got_setup)
         self.assertIn("| Codex | `codex mcp login frameos`", got_setup)

@@ -7,7 +7,7 @@
   },
   "interface": {
     "developerName": "Satvik Shrivas",
-    "longDescription": "You recorded an hour. Your audience scrolls in seconds. FrameOS closes that gap without opening an editor.\n\nPaste a link to your podcast, stream, interview or webinar, and FrameOS finds the moments worth sharing. It cuts them into vertical clips (or 4:5, 3:4, 1:1 and 16:9), keeps the speaker in frame and adds captions people can read with the sound off. In Codex you can also point it at a video file on your computer.\n\nFrom there, just ask:\n- Show your best clips, ranked, with their timestamps.\n- Restyle the captions to match your brand, then export clean MP4s.\n- Make thumbnail options from real frames of your video, with a headline on top.\n- Draft a title and caption for YouTube Shorts, Instagram, Facebook, LinkedIn, TikTok or X.\n- Post a clip to a YouTube, Facebook, Instagram or LinkedIn account you've connected in FrameOS. Nothing goes live until you say yes, and YouTube uploads can go out as private.\n\nEverything works on your own footage, in your FrameOS workspace. Sign in with your FrameOS account to get started.\n\nScheduling posts, posting to TikTok or X, and timeline edits aren't available from here; they live in the FrameOS web app.",
+    "longDescription": "You recorded an hour. Your audience scrolls in seconds. FrameOS closes that gap without opening an editor.\n\nPaste a link to your podcast, stream, interview or webinar, and FrameOS finds the moments worth sharing. It cuts them into vertical clips (or 4:5, 3:4, 1:1 and 16:9), keeps the speaker in frame and adds captions people can read with the sound off. In Codex you can also point it at a video file on your computer.\n\nFrom there, just ask:\n- Show your best clips, ranked, with their timestamps.\n- Restyle the captions to match your brand, then export captioned MP4s.\n- Make thumbnail options from real frames of your video, with a headline on top.\n- Draft a title and caption for YouTube Shorts, Instagram, Facebook, LinkedIn, TikTok or X.\n- Post a clip to a YouTube, Facebook, Instagram or LinkedIn account you've connected in FrameOS. Nothing goes live until you say yes, and YouTube uploads can go out as private.\n\nEverything works on your own footage, in your FrameOS workspace. Sign in with your FrameOS account to get started.\n\nScheduling posts and timeline edits aren't available here; they live in the FrameOS web app. FrameOS can't post to TikTok or X: it writes the caption and gives you the MP4 to upload yourself.",
     "capabilities": [
       "Clip long videos into captioned shorts",
       "Restyle captions and export MP4s",
@@ -37,19 +37,19 @@
             {
               "description": "Restyle captions, then export",
               "prompt": "Switch the captions on my top clip to the Beasty style and give me the MP4 download link.",
-              "tools_triggered": "list_projects, list_clips, set_caption_style, export_clip, get_job",
-              "expected_behavior": "Finds the top-ranked clip. The app asks the user to confirm the caption change, because it replaces the saved style. After a yes, starts one export, waits for it without starting another, then returns the download link and says it expires in about an hour. Spends no credits."
+              "tools_triggered": "whoami, list_projects, list_clips, describe_clip, set_caption_style, export_clip, get_job",
+              "expected_behavior": "Finds the top-ranked clip in the newest finished project. If its captions are not Beasty yet, asks the user to confirm the change first, because it replaces the saved style, and saves it after a yes. If they already are Beasty (for example from an earlier run of this test), says so and changes nothing. Then gives the captioned MP4 download link: at once if that file was made before, or after starting one export and checking it with get_job until it finishes, without starting another. Says the link expires in about an hour. Spends no credits."
             },
             {
               "description": "Thumbnail options from real frames",
               "prompt": "Make 2 YouTube thumbnail options from my top clip.",
-              "tools_triggered": "list_projects, list_clips, create_thumbnail_job, get_thumbnail_job",
+              "tools_triggered": "whoami, list_projects, list_clips, create_thumbnail_job, get_thumbnail_job",
               "expected_behavior": "States the cost first: 10 credits for each thumbnail delivered, 20 in total. Starts one 16:9 job from that clip, checks it until it finishes, and shows each option with why it was picked and its preview and download links. Describes them as frames from the user's own video with a headline, not generated images."
             },
             {
               "description": "Draft social copy without posting",
               "prompt": "Write an Instagram caption with hashtags for my top clip.",
-              "tools_triggered": "list_projects, list_clips, generate_social_copy",
+              "tools_triggered": "whoami, list_projects, list_clips, generate_social_copy",
               "expected_behavior": "Shows a draft caption and hashtags written only from what is said in the clip, with its character count, and asks the user to check names and numbers. Does not post. Offers to post only if asked, and would then show the account and the final text and wait for a clear yes."
             }
           ],
@@ -72,7 +72,7 @@
         "commerce_description": "FrameOS sells nothing inside ChatGPT or Codex. Clipping and thumbnails use credits from the user's own FrameOS account. When the balance is too low, FrameOS says so and links its informational plans page; plans and credits are bought only on frameos.studio."
       },
       "publication": {
-        "release_notes": "Version {version}, the first Plugin Directory release. Eight skills (setup, clip, captions, find moments, thumbnails, publish, library and repurpose) use the FrameOS connector's 27 tools to turn long videos into captioned shorts, restyle captions, make thumbnails from real frames, draft social copy and post after the user confirms."
+        "release_notes": "Version {version}. Eight skills (setup, clip, captions, find moments, thumbnails, publish, library and repurpose) use the FrameOS connector's 27 tools to turn long videos into captioned shorts, restyle captions, make thumbnails from real frames, draft social copy and post after the user confirms. Changed since the 2026-11-13 review: every tool sets readOnlyHint, destructiveHint, openWorldHint and idempotentHint explicitly; submit_video, submit_uploaded_video and create_thumbnail_job are now marked destructive because their effects can't be undone; set_caption_style and create_collection are marked idempotent; each description says what the tool changes, overwrites, publishes or repeats on a retry, and states its input limits; list_projects, get_job and get_thumbnail_job now change nothing; tool results no longer include internal account IDs or storage paths."
       }
     }
   }

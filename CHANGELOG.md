@@ -4,6 +4,17 @@ All notable changes to the FrameOS plugin, skills and extension packages. The fo
 
 ## [Unreleased]
 
+## [0.1.3] - not yet released
+
+### Changed
+
+- Synced with the FrameOS connector 0.1.3 (2026-11-15), from the audit before resubmitting to OpenAI's directory. `whoami` no longer returns the user or workspace ID; `list_projects` and `get_project` show `uploadedFile` instead of an uploaded file's storage path; job results leave out the raw start time and, for thumbnail jobs, the internal scoring and transcript-service name. An empty balance now reads "Out of credits. This workspace has no credits left to process this video." and the server adds a link to the informational plans page instead of telling the user to upgrade. The server instructions say to use only videos the user has the rights to, that scheduling, timeline edits and connecting accounts happen in the web app, and that nothing is sold in chat; descriptions state the input limits. The unused `content_type` and `include_face` inputs are gone. The tool snapshot, `evals/mocks/frameos/_tools.json`, the mock server, its tests and the eval mocks follow it.
+- frameos-clip no longer says `list_projects` settles a stuck render (it only reads), asks for videos the user owns or has the rights to use, no longer adds that paid plans export without the watermark, and calls a refused download what it is rather than a sign-in.
+- The ground rules separate what lives in the FrameOS web app (scheduling, timeline edits, clip length, cancelling, connecting accounts, the brand logo) from what FrameOS doesn't do at all (posting to TikTok or X, share links, censoring, dubbing), so the agent never sends someone to the dashboard for a feature that isn't there. frameos-setup says the same.
+- frameos-find-moments tells an uploaded source by `uploadedFile`, frameos-thumbnails no longer names the unused face option, and the captions skill's starter prompt says Beasty.
+- The OpenAI ZIP's setup skill installs ChatGPT from the Plugins directory, with no developer-mode steps.
+- OpenAI listing: test case 3 passes whether or not the clip already has Beasty captions, cases 4 and 5 list `whoami`, the release notes say what changed since the 2026-11-13 review, the About text says FrameOS can't post to TikTok or X (it writes the copy and gives you the MP4), and "export clean MP4s" became "export captioned MP4s".
+
 ## [0.1.2] - not yet released
 
 ### Added
