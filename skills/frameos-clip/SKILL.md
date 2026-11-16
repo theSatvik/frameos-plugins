@@ -16,6 +16,7 @@ Turn one long video into ranked short clips, see the render through, and hand ba
 - Never post anything publicly without the user's explicit confirmation for that specific post.
 - Poll patiently: wait between status checks, never re-submit a render because polling took long, and never call `export_clip` again while its export is still rendering.
 - Download and preview links expire. Fetch fresh ones instead of reusing old links.
+- When the user means their latest clips without naming a project ("my top clip", "my best clips"), use the newest project that has finished with clips. If a newer one is still rendering, say so in one line and carry on with the finished one.
 - Use only IDs returned by FrameOS tools. A "not found" error means the item does not exist or belongs to another workspace - do not guess IDs.
 - Errors: 401 or 403 means reconnect (frameos-setup). 402 means out of credits - link the pricing page, do not retry. 404 means not found. 409 explains the right next step - follow it. 422 means fix the input it names. 429 means slow down - on a new render it means either too many videos are already processing (wait for one to finish) or another video is still being submitted (submit again in a few seconds). 503 or "unavailable" is temporary - retry once later.
 - If an error gives no reason (for example only "Error executing tool"), check the state with a read-only call (`whoami`, `list_projects`, `get_job`) before doing anything else, and never repeat a render, thumbnail or post call blindly.

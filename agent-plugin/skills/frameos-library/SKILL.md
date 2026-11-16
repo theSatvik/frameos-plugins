@@ -16,6 +16,7 @@ Find, inspect and organise the projects, clips and collections already in the us
 - Never post anything publicly without the user's explicit confirmation for that specific post.
 - Poll patiently: wait between status checks, never re-submit a render because polling took long, and never call `export_clip` again while its export is still rendering.
 - Download and preview links expire. Fetch fresh ones instead of reusing old links.
+- When the user means their latest clips without naming a project ("my top clip", "my best clips"), use the newest project that has finished with clips. If a newer one is still rendering, say so in one line and carry on with the finished one.
 - Use only IDs returned by FrameOS tools. A "not found" error means the item does not exist or belongs to another workspace - do not guess IDs.
 - Errors: 401 or 403 means reconnect (frameos-setup). 402 means out of credits - link the pricing page, do not retry. 404 means not found. 409 explains the right next step - follow it. 422 means fix the input it names. 429 means slow down - on a new render it means either too many videos are already processing (wait for one to finish) or another video is still being submitted (submit again in a few seconds). 503 or "unavailable" is temporary - retry once later.
 - If an error gives no reason (for example only "Error executing tool"), check the state with a read-only call (`whoami`, `list_projects`, `get_job`) before doing anything else, and never repeat a render, thumbnail or post call blindly.
@@ -57,7 +58,7 @@ Hand off instead of improvising:
 2. To find a project the user describes, match on `title`, `source` (the link they used), `filename` (for uploads) and `createdAt`. There is no keyword search. Page through at most 5 pages of 50; if it is still not found, ask for the title, link or rough date.
 3. If several projects match, list them and ask which one.
 4. Report the status:
-   - pending or processing: give `progress` (0-100 in this list), `processingMessage` and `etaRemainingSeconds` when present. To keep waiting for it, hand off to frameos-clip.
+   - pending or processing: give `progress` (0-100 in this list), `processingMessage` and `etaRemainingSeconds` when present. To keep waiting for it, hand off to frameos-clip. If the user asked for clips rather than this project's status, also answer from the newest finished project (workflow 2).
    - completed: offer to show its clips (workflow 2).
    - failed: explain `errorMessage` in plain words; it ends with a short code in brackets, which you do not need to show. A project that failed within the last hour may still be retried automatically, so check again before suggesting a re-run. Re-runs go through frameos-clip.
    - cancelled: it was stopped in the web app. A re-run goes through frameos-clip.

@@ -37,7 +37,7 @@ If the user has several accounts on one platform, ask which one by display name.
 | Instagram | A Reel, also shared to the feed | Ignored - always public | The Reel's permalink, or `https://www.instagram.com/` if Instagram did not return one |
 | LinkedIn | A post on the member's feed with the video attached | Ignored - always public | `https://www.linkedin.com/feed/update/...`, or `https://www.linkedin.com/feed/` if no post id came back |
 
-Things a post never does here: schedule for later, set a custom cover or thumbnail, tag people or locations, post to a LinkedIn company page, or edit or delete the post afterwards. The user does those in the platform's own app.
+Things a post never does here: schedule for later (that happens in the FrameOS web app), set a custom cover or thumbnail, tag people or locations, post to a LinkedIn company page, or edit or delete the post afterwards (the user does those in the platform's own app).
 
 Captions: for clips with `exportRequired` true, FrameOS posts the exported file in the clip's saved caption style. If that export does not exist yet, `post_clip` refuses with "Captions for this clip aren't rendered yet" - export first (SKILL.md, Workflow B step 2). Clips whose caption style is `none` post without captions. On a `free` plan the clip carries a small FrameOS watermark.
 

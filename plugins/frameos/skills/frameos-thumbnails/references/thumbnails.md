@@ -60,6 +60,7 @@ What to say before starting (fill in the numbers):
 - `get_thumbnail_job` returns the job `state` (`pending`, `processing`, `completed`, `failed`, `cancelled`), `progress` from 0 to 1, a `message`, a time estimate (about 120 s), and `result` once completed.
 - Typical message order: queued, starting, downloading source (link and project sources), transcribing clip, matching your style (style reference or non-vertical shape) or sampling frames, finalizing, done.
 - Cadence: first check about 20 s after starting, then every 10 s. Usually done in about 2 minutes; a long link can take several minutes to download.
+- A chat app that can't wait: say the job is running and, when the user asks again, call `get_thumbnail_job` for the same job (its result keeps the reasons and the headline). `list_thumbnails` has fresh links but no reasons.
 - Stop after 15 minutes. A job still `pending` by then most likely never started; do not start another automatically. Check `list_thumbnails` later.
 - There is no cancel tool. Never start a duplicate job while one is running - each delivered image is charged.
 

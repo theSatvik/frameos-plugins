@@ -3,7 +3,7 @@
   "fill_before_upload": {
     "_about": "Owner TODO: fill both, then rebuild. Empty values leave the ZIP not ready to submit, and the build says so.",
     "sample_video_url": "https://storage.googleapis.com/frameos-learn-9bf5b2bf/samples/frameos-sample-talk.mp4",
-    "demo_recording_url": "https://storage.googleapis.com/frameos-learn-9bf5b2bf/review/frameos-chatgpt-walkthrough-91d84079621a.mp4"
+    "demo_recording_url": "https://storage.googleapis.com/frameos-learn-9bf5b2bf/review/frameos-chatgpt-walkthrough-cb6cd2972eae.mp4"
   },
   "interface": {
     "developerName": "Satvik Shrivas",
@@ -29,28 +29,28 @@
               "expected_behavior": "Reports the workspace, plan and spendable credits in plain words, without internal IDs. Then lists the newest finished project's clips best first, each with its title or hook, length, score and a preview link. Starts nothing and spends no credits."
             },
             {
+              "description": "Restyle captions, then export",
+              "prompt": "Switch the captions on my top clip to the Beasty style and give me the MP4 download link.",
+              "tools_triggered": "whoami, list_projects, list_clips, describe_clip, set_caption_style, export_clip, get_job",
+              "expected_behavior": "Finds the top-ranked clip in the newest finished project (if a newer render is still running, says so in one line). If its captions are not Beasty yet, asks the user to confirm the change first, because it replaces the saved style, and saves it after a yes. If they already are Beasty (for example from an earlier run of this test), says so and changes nothing. Then gives the captioned MP4 download link: at once if that file was made before, or after starting one export and checking it with get_job; if it is still rendering after a few checks, says so and gives the link when asked again, without starting another export. Says the link expires in about an hour. Spends no credits."
+            },
+            {
+              "description": "Thumbnail options from real frames",
+              "prompt": "Use FrameOS to make 2 YouTube thumbnail options from my top clip.",
+              "tools_triggered": "whoami, list_projects, list_clips, create_thumbnail_job, get_thumbnail_job",
+              "expected_behavior": "Uses the top clip of the newest finished project. States the cost first: 10 credits for each thumbnail delivered, 20 in total. Starts one 16:9 job from that clip and checks it. Shows the finished options, or, if the job is still running (it usually takes 2 to 3 minutes), says so and shows them when asked again, without starting another job. Each option has its label, size, and preview and download links. Describes them as designs built from frames of the user's own video with a headline, not generated images."
+            },
+            {
+              "description": "Draft social copy without posting",
+              "prompt": "Use FrameOS to write an Instagram caption with hashtags for my top clip.",
+              "tools_triggered": "whoami, list_projects, list_clips, generate_social_copy",
+              "expected_behavior": "Uses the top clip of the newest finished project. Shows a draft caption and hashtags written only from what is said in the clip, with its character count, and asks the user to check names and numbers. Does not post. Offers to post only if asked, and would then show the account and the final text and wait for a clear yes."
+            },
+            {
               "description": "Clip a video FrameOS owns from a public link",
               "prompt": "Turn {sample_video_url} into 3 vertical shorts.",
               "tools_triggered": "whoami, submit_video, get_job, list_clips",
               "expected_behavior": "Says the render costs 1 credit per started minute of the video, charged only when clips are delivered. Submits the link once as 9:16 with 3 clips and checks progress with get_job. Lists the finished clips, or says the render is still running and to ask again later. Never submits the same link twice."
-            },
-            {
-              "description": "Restyle captions, then export",
-              "prompt": "Switch the captions on my top clip to the Beasty style and give me the MP4 download link.",
-              "tools_triggered": "whoami, list_projects, list_clips, describe_clip, set_caption_style, export_clip, get_job",
-              "expected_behavior": "Finds the top-ranked clip in the newest finished project. If its captions are not Beasty yet, asks the user to confirm the change first, because it replaces the saved style, and saves it after a yes. If they already are Beasty (for example from an earlier run of this test), says so and changes nothing. Then gives the captioned MP4 download link: at once if that file was made before, or after starting one export and checking it with get_job until it finishes, without starting another. Says the link expires in about an hour. Spends no credits."
-            },
-            {
-              "description": "Thumbnail options from real frames",
-              "prompt": "Make 2 YouTube thumbnail options from my top clip.",
-              "tools_triggered": "whoami, list_projects, list_clips, create_thumbnail_job, get_thumbnail_job",
-              "expected_behavior": "States the cost first: 10 credits for each thumbnail delivered, 20 in total. Starts one 16:9 job from that clip, checks it until it finishes, and shows each option with why it was picked and its preview and download links. Describes them as frames from the user's own video with a headline, not generated images."
-            },
-            {
-              "description": "Draft social copy without posting",
-              "prompt": "Write an Instagram caption with hashtags for my top clip.",
-              "tools_triggered": "whoami, list_projects, list_clips, generate_social_copy",
-              "expected_behavior": "Shows a draft caption and hashtags written only from what is said in the clip, with its character count, and asks the user to check names and numbers. Does not post. Offers to post only if asked, and would then show the account and the final text and wait for a clear yes."
             }
           ],
           "negative": [
