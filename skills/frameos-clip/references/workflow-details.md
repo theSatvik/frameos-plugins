@@ -9,7 +9,7 @@ Reference for the frameos-clip skill. Field names and messages are exactly what 
 - `get_job` also returns `message`, the total ETA in `eta_seconds` (may be empty until the video is downloaded) and the seconds remaining (0 once finished). A render job has no `result`; read the clips with `list_clips`.
 - A job id FrameOS has no record of reads as `pending` with an empty message forever. If a render stays like that for more than 5 minutes, check the project with `list_projects`.
 - `get_project` has no error text. The failure reason is in `list_projects` (`errorMessage`) and in the job `message`.
-- Job id shapes: render `clip:render:<project id>`, export `export:<clip id>:<time>`. A project's render job id can be rebuilt from the project id.
+- Job id shapes: a render is clip:render:<project id>; an export is the word export, the clip id and a time, joined by colons. A project's render job id can be rebuilt from the project id.
 - There is no cancel tool. Renders are stopped only in the web app, which shows up here as `cancelled`.
 
 ## Render messages, in order
@@ -18,7 +18,7 @@ Reference for the frameos-clip skill. Field names and messages are exactly what 
 |---|---|---|
 | `queued` | 0 | waiting to start |
 | `downloading source` | 0.05 | downloading the video |
-| starts with `source blocked the download` | 0.05 | the site blocked the download; FrameOS tries again a couple of times, a few minutes apart |
+| starts with "source blocked the download" | 0.05 | the site blocked the download; FrameOS tries again a couple of times, a few minutes apart |
 | `transcribing` | 0.1 | transcribing the audio |
 | `scoring hooks across N segments` | 0.3 | finding the strongest moments |
 | `rendering N clips` | 0.45 | rendering N clips |
@@ -28,7 +28,7 @@ Reference for the frameos-clip skill. Field names and messages are exactly what 
 
 ## Export job messages
 
-`queued`, then `loading master`, then `burning <style> captions`, then `uploading export`, then state `completed` with a message starting `export ready`. Typical: 15-60 seconds, plus a cold start.
+`queued`, then `loading master`, then `burning <style> captions`, then `uploading export`, then state `completed` with a message starting "export ready". Typical: 15-60 seconds, plus a cold start.
 
 ## Polling by host type
 
