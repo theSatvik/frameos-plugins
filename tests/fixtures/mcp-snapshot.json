@@ -13,7 +13,7 @@
         "listChanged": false
       }
     },
-    "instructions": "Create clips with submit_video (or create_upload_link, then submit_uploaded_video), poll get_job, then call list_clips. Only submit_video, submit_uploaded_video and create_thumbnail_job spend credits (not refunded). Confirm with the user before those, before set_caption_style or recaption_clip (they overwrite a clip) and before post_clip (it publishes). Use only projects the connected account owns, and only videos the user owns or has the rights to use. post_clip posts right away; scheduling, timeline edits and connecting social accounts happen in the FrameOS web app at https://frameos.studio/dashboard. Nothing can be bought here: if the user asks about credits or plans, or runs out, link https://frameos.studio/pricing.",
+    "instructions": "Create clips with submit_video (or create_upload_link, then submit_uploaded_video), poll get_job, then call list_clips. Only submit_video, submit_uploaded_video and create_thumbnail_job spend credits (not refunded). Confirm with the user before those, before set_caption_style or recaption_clip (they overwrite a clip) and before post_clip (it publishes). Use only projects the connected account owns. post_clip posts right away; scheduling posts, timeline edits and connecting social accounts are done in the FrameOS web app, not here.",
     "protocolVersion": "2025-11-25",
     "serverInfo": {
       "icons": [
@@ -1018,5 +1018,5 @@
       }
     ]
   },
-  "_source": "FrameOS-Backend mcp_server/frameos_mcp/server.py sha256 c9d7ac1d60630305f80b2b70be1db936c612974dec6e6c4851ad7e1960678aa8 (branch claude/openai-presubmit-fixes off main 7091db5, PR #142, captured 2026-11-15)"
+  "_source": "FrameOS-Backend mcp_server/frameos_mcp/server.py sha256 e0dbed58faea9034fcfbccb050651f76e29930ad4dabe31805f6d199150cfad6 (main 2545e4c, PR #143, captured 2026-11-17)"
 }

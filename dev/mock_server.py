@@ -51,9 +51,8 @@ INSTRUCTIONS = (
     "Create clips with submit_video (or create_upload_link, then submit_uploaded_video), poll get_job, then call list_clips. "
     "Only submit_video, submit_uploaded_video and create_thumbnail_job spend credits (not refunded). "
     "Confirm with the user before those, before set_caption_style or recaption_clip (they overwrite a clip) and before post_clip (it publishes). "
-    "Use only projects the connected account owns, and only videos the user owns or has the rights to use. "
-    "post_clip posts right away; scheduling, timeline edits and connecting social accounts happen in the FrameOS web app at https://frameos.studio/dashboard. "
-    "Nothing can be bought here: if the user asks about credits or plans, or runs out, link https://frameos.studio/pricing."
+    "Use only projects the connected account owns. "
+    "post_clip posts right away; scheduling posts, timeline edits and connecting social accounts are done in the FrameOS web app, not here."
 )
 
 MOCK_HOST = "https://mock.frameos.invalid"

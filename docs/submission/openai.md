@@ -156,7 +156,7 @@ The pre-resubmission audit (connector 0.1.3, 2026-11-15) also changed what tools
 
 - `whoami` no longer returns the user or workspace ID, and `list_projects` and `get_project` show `uploadedFile` instead of an uploaded file's storage path. Job results leave out the raw start time and, for thumbnails, internal scoring (OpenAI's response-minimization rule).
 - A short balance is explained ("This workspace has no credits left to process this video") with a link to the informational plans page, never "upgrade".
-- The server instructions say to use only videos the user has the rights to, that scheduling and connecting accounts happen in the web app, and that nothing is sold in chat. Descriptions state the input limits (`max_clips` 1 to 20, `focus_prompt` up to 1000 characters, transcript pages up to 500, `tone` up to 100 characters).
+- The server instructions add that `post_clip` posts right away and that scheduling, timeline edits and connecting accounts are done in the FrameOS web app. They carry no links and nothing about buying: OpenAI's scan marked a version with both "needs further review" (2026-11-17), so the pricing link stays in the 402 message and the skills, and the rights line in the `submit_video` and `create_thumbnail_job` descriptions. Descriptions state the input limits (`max_clips` 1 to 20, `focus_prompt` up to 1000 characters, transcript pages up to 500, `tone` up to 100 characters).
 - The unused `content_type` and `include_face` inputs are gone.
 
 The values below are from [`tests/fixtures/mcp-snapshot.json`](../../tests/fixtures/mcp-snapshot.json). **They reach the scan only after the connector is deployed**; then select **Rescan**.
