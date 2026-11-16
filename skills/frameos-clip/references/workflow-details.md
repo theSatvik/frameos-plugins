@@ -50,7 +50,7 @@ The video itself (same source gives the same result - do not re-submit it unchan
 | Code | Meaning | Next step for the user |
 |---|---|---|
 | `(source_too_short)` | under 30 seconds of video | use a longer video |
-| `(insufficient_credits)` | the balance did not cover the video. Checked at submit when the length is known (the 402 message, saved on the project), otherwise right after download. Nothing was charged | add credits (https://frameos.studio/pricing) or use a shorter video, then submit the same link or `gs_path` again: it re-runs this project |
+| `(insufficient_credits)` | the balance did not cover the video. Checked at submit when the length is known (the 402 message, saved on the project), otherwise right after download. Nothing was charged | add credits (the pricing page in the ground rules) or use a shorter video, then submit the same link or `gs_path` again: it re-runs this project |
 | `(no_clips_found)` | not enough clear speech | use a longer video, or one with more talking |
 | `(no_publishable_clips)` | moments found, none stood on their own | use a longer video, or one where the speaker finishes complete thoughts |
 | `(not_a_video)` | the file is an image | upload a video file |
@@ -93,8 +93,8 @@ Messages without a code:
 
 | Error | Meaning | What to do |
 |---|---|---|
-| 402 `Out of credits...` | balance is 0 | link https://frameos.studio/pricing and stop; never retry. The project is listed as failed with the same message and `(insufficient_credits)`; it costs nothing |
-| 402 `This video is N minutes long and needs N credits, but your workspace has M...` | the length is known at submit (Vimeo links, or a source an earlier run of this project measured) and the balance does not cover it. M leaves out credits set aside for renders still in progress. The project is listed as failed with the same message | tell the user the shortfall, link https://frameos.studio/pricing, or suggest a shorter video; never retry |
+| 402 `Out of credits...` | balance is 0 | link the pricing page from the ground rules and stop; never retry. The project is listed as failed with the same message and `(insufficient_credits)`; it costs nothing |
+| 402 `This video is N minutes long and needs N credits, but your workspace has M...` | the length is known at submit (Vimeo links, or a source an earlier run of this project measured) and the balance does not cover it. M leaves out credits set aside for renders still in progress. The project is listed as failed with the same message | tell the user the shortfall, link the pricing page from the ground rules, or suggest a shorter video; never retry |
 | 429 `N videos are already processing in this workspace (limit N)...` | the workspace already has the maximum renders running (usually 3); nothing was submitted | show what is rendering with `list_projects`; submit again only after one finishes |
 | 429 `Another video is still being submitted in this workspace. Submit again in a few seconds.` | another submit was in progress at the same moment; nothing was submitted | wait a few seconds and submit once more |
 | 400 `Paste a public video link (http:// or https://), or upload the file.` | the link points at a private or internal address | ask for a public link, or upload the file |
