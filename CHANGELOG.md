@@ -13,6 +13,8 @@ All notable changes to the FrameOS plugin, skills and extension packages. The fo
 - The ground rules separate what lives in the FrameOS web app (scheduling, timeline edits, clip length, cancelling, connecting accounts, the brand logo) from what FrameOS doesn't do at all (posting to TikTok or X, share links, censoring, dubbing), so the agent never sends someone to the dashboard for a feature that isn't there. frameos-setup says the same.
 - frameos-find-moments tells an uploaded source by `uploadedFile`, frameos-thumbnails no longer names the unused face option, and the captions skill's starter prompt says Beasty.
 - The OpenAI ZIP's setup skill installs ChatGPT from the Plugins directory, with no developer-mode steps.
+- frameos-setup also triggers when the user asks to buy credits or change plan, and frameos-publish when they want a post scheduled, so the ground rules (pricing link, web app for scheduling) are loaded for those requests. The connector's `create_thumbnail_job` says thumbnails are built from real frames of the video, and `post_clip` says it posts right away and can't schedule (FrameOS-Backend #144).
+- OpenAI negative test 3 now expects only what matters: no purchase or plan change, and credits and plans are managed on the FrameOS website.
 - OpenAI listing: test case 3 passes whether or not the clip already has Beasty captions, cases 4 and 5 list `whoami`, the release notes say what changed since the 2026-11-13 review, the About text says FrameOS can't post to TikTok or X (it writes the copy and gives you the MP4), and "export clean MP4s" became "export captioned MP4s".
 
 ## [0.1.2] - not yet released

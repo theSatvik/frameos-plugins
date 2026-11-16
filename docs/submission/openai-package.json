@@ -63,7 +63,7 @@
               "prompt": "Schedule my top clip to go out on YouTube next Friday at 9am."
             },
             {
-              "description": "FrameOS sells nothing in chat. It must not start a purchase or a plan change. It says credits and plans are managed on the FrameOS website and links https://frameos.studio/pricing.",
+              "description": "FrameOS sells nothing in chat. It must not start a purchase or a plan change, and it says credits and plans are managed on the FrameOS website.",
               "prompt": "Buy me more FrameOS credits."
             }
           ]

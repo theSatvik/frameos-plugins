@@ -1,6 +1,6 @@
 ---
 name: frameos-setup
-description: "Connect FrameOS to this agent, prove the connection works, and fix sign-in or connection problems. Use when the user asks to install, connect, set up, log in to or reconnect FrameOS, asks whether FrameOS is connected or what it can do, or when any FrameOS tool fails with a sign-in, permission, scope, connection or unavailable error. Runs a live account check, summarises workspace, plan and credit balance, gives reconnect steps for each app, and suggests first actions. Clipping a video belongs to frameos-clip; credit history, projects and collections belong to frameos-library."
+description: "Connect FrameOS to this agent, prove the connection works, and fix sign-in or connection problems. Use when the user asks to install, connect, set up, log in to or reconnect FrameOS, asks whether FrameOS is connected or what it can do, asks to buy credits or change plan (that happens on the FrameOS website, never here), or when any FrameOS tool fails with a sign-in, permission, scope, connection or unavailable error. Runs a live account check, summarises workspace, plan and credit balance, gives reconnect steps for each app, and suggests first actions. Clipping a video belongs to frameos-clip; credit history, projects and collections belong to frameos-library."
 ---
 
 # FrameOS Setup

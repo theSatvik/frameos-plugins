@@ -762,7 +762,7 @@
           "readOnlyHint": false,
           "title": "Create Thumbnail Job"
         },
-        "description": "Generate 1 to 3 thumbnails (max_thumbnails, default 3; a larger number makes 3) from one source: clip_id or video_id for media already in FrameOS (video_id re-downloads that project's original; use clip_id for uploads), or a public http(s) video url; style_ref is an optional public image link to match. FrameOS downloads these links; gs:// paths and local files are rejected. Only for videos the user owns or has the rights to use. Spends 10 credits per thumbnail made, when the job succeeds; not refunded, fewer are made if the balance is short, and a failed job costs nothing. Every call, retries included, is a new paid job. Returns a job ID for get_thumbnail_job.",
+        "description": "Generate 1 to 3 thumbnails (max_thumbnails, default 3; a larger number makes 3) built from real frames of one source video with a headline laid over them; no new imagery is generated. Source: clip_id or video_id for media already in FrameOS (video_id re-downloads that project's original; use clip_id for uploads), or a public http(s) video url; style_ref is an optional public image link to match. FrameOS downloads these links; gs:// paths and local files are rejected. Only for videos the user owns or has the rights to use. Spends 10 credits per thumbnail made, when the job succeeds; not refunded, fewer are made if the balance is short, and a failed job costs nothing. Every call, retries included, is a new paid job. Returns a job ID for get_thumbnail_job.",
         "inputSchema": {
           "properties": {
             "clip_id": {
@@ -974,7 +974,7 @@
           "readOnlyHint": false,
           "title": "Post Clip"
         },
-        "description": "Publish a clip as a new post on a connected social account. Call only when the user explicitly asks to publish: once started it can't be cancelled or taken down from FrameOS. Returns a job ID: poll get_job; when it completes its message is the public post URL. Every call posts again: don't retry, even after a timeout or failed job, until the user checks the account. privacy (default public) is honoured on YouTube only (uploads are marked not made for kids): on Facebook, private uploads the video unpublished and unlisted posts it publicly; Instagram and LinkedIn posts are always public.",
+        "description": "Publish a clip as a new post on a connected social account, right away: scheduling a post isn't possible here (that is done in the FrameOS web app). Call only when the user explicitly asks to publish: once started it can't be cancelled or taken down from FrameOS. Returns a job ID: poll get_job; when it completes its message is the public post URL. Every call posts again: don't retry, even after a timeout or failed job, until the user checks the account. privacy (default public) is honoured on YouTube only (uploads are marked not made for kids): on Facebook, private uploads the video unpublished and unlisted posts it publicly; Instagram and LinkedIn posts are always public.",
         "inputSchema": {
           "properties": {
             "clip_id": {
@@ -1018,5 +1018,5 @@
       }
     ]
   },
-  "_source": "FrameOS-Backend mcp_server/frameos_mcp/server.py sha256 e0dbed58faea9034fcfbccb050651f76e29930ad4dabe31805f6d199150cfad6 (main 2545e4c, PR #143, captured 2026-11-17)"
+  "_source": "FrameOS-Backend mcp_server/frameos_mcp/server.py sha256 be1494cf354b4247a8d8589657fe3da677c278dd3072f7adf7791c3919024b3d (main 2a5cb0d, PR #144, captured 2026-11-17)"
 }

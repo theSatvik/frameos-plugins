@@ -1,6 +1,6 @@
 ---
 name: frameos-publish
-description: "Draft social copy for FrameOS clips and post clips to connected YouTube, Facebook Page, Instagram Business and LinkedIn accounts, one confirmed post at a time. Use when the user wants a title, caption or hashtags for a clip, asks which social accounts are connected, or explicitly asks to post or publish a clip. TikTok and X get copy plus a download link only. Drafting or preparing never posts. Routing: making or exporting clips is frameos-clip, changing the caption look is frameos-captions, thumbnails are frameos-thumbnails, a multi-clip content pack is frameos-repurpose, sign-in or connection errors are frameos-setup."
+description: "Draft social copy for FrameOS clips and post clips to connected YouTube, Facebook Page, Instagram Business and LinkedIn accounts, one confirmed post at a time. Use when the user wants a title, caption or hashtags for a clip, asks which social accounts are connected, explicitly asks to post or publish a clip, or wants a post scheduled (scheduling happens in the FrameOS web app, not here). TikTok and X get copy plus a download link only. Drafting or preparing never posts. Routing: making or exporting clips is frameos-clip, changing the caption look is frameos-captions, thumbnails are frameos-thumbnails, a multi-clip content pack is frameos-repurpose, sign-in or connection errors are frameos-setup."
 license: MIT
 ---
 
