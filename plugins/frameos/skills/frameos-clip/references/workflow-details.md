@@ -97,7 +97,7 @@ Messages without a code:
 | 402 `This video is N minutes long and needs N credits, but your workspace has M...` | the length is known at submit (Vimeo links, or a source an earlier run of this project measured) and the balance does not cover it. M leaves out credits set aside for renders still in progress. The project is listed as failed with the same message | tell the user the shortfall, link the pricing page from the ground rules, or suggest a shorter video; never retry |
 | 429 `N videos are already processing in this workspace (limit N)...` | the workspace already has the maximum renders running (usually 3); nothing was submitted | show what is rendering with `list_projects`; submit again only after one finishes |
 | 429 `Another video is still being submitted in this workspace. Submit again in a few seconds.` | another submit was in progress at the same moment; nothing was submitted | wait a few seconds and submit once more |
-| 400 `Paste a public video link (http:// or https://), or upload the file.` | the link points at a private or internal address | ask for a public link, or upload the file |
+| 400 `Paste a public video link...` | the link points at a private or internal address | ask for a public link, or upload the file |
 | 422 `This video is only N seconds long...` | under 30 seconds (caught at submit only when the length is known up front) | use a longer video |
 | 422 `Unsupported aspect ratio` | shape not allowed | use 9:16, 4:5, 3:4, 1:1 or 16:9 |
 | 422 with a list of field errors | link not http(s) or not 8-2048 characters, clip count outside 1-20, or focus text over 1000 characters | fix the field and submit again |
