@@ -63,8 +63,8 @@ Link imports that will not fix themselves:
 |---|---|---|
 | `(source_members_only)` | members-only YouTube video | upload the file (YouTube Studio can download your own videos) |
 | `(source_requires_auth)` | the video needs a sign-in or is private | make it public, or upload the file |
-| `(source_cookies_invalid)` | the site refused the download | upload the file |
 | `(source_format_unavailable)` | no compatible version could be downloaded | upload the file |
+| any other code for a refused download | the site would not let FrameOS download it | upload the file |
 | `(unsupported_url)` | FrameOS cannot import from this site | upload the file |
 | `(not_direct_media)` | the link is not a video file or a supported video page | use the video's own page link, a direct file link, or upload |
 | `(blocked_host)` | private or internal address | use a public link |
@@ -75,7 +75,7 @@ Link imports that will not fix themselves:
 
 Temporary (FrameOS may re-run these once by itself within about an hour - check `list_projects` again later before suggesting anything else):
 
-`(source_forbidden)`, `(source_bot_check)`, `(source_download_timeout)`, `(source_rate_limited)`, `(dns_failed)`, `(empty_download)`, `(direct_download_failed)`, `(google_drive_failed)`, `(download_failed)`, `(source_download_failed)`, `(cookie_fetch_failed)`, `(render_failed)`.
+`(source_forbidden)`, `(source_download_timeout)`, `(source_rate_limited)`, `(dns_failed)`, `(empty_download)`, `(direct_download_failed)`, `(google_drive_failed)`, `(download_failed)`, `(source_download_failed)`, `(render_failed)`, and any other code for a failed download.
 
 If one of these is still `failed` after the automatic retry: for a link, suggest uploading the file directly (some sites block server downloads); otherwise suggest trying again later. Re-submitting a link whose last render failed re-runs that same project (it may reuse settings chosen for it earlier in the web app).
 
