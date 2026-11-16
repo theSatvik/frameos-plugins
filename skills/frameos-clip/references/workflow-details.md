@@ -106,10 +106,9 @@ Messages without a code:
 
 ## Uploading a local file
 
-1. Pre-checks with the shell: the file exists; its size (`ls -lh "/path/to/video.mp4"`); its duration in seconds if `ffprobe` is installed: `ffprobe -v error -show_entries format=duration -of csv=p=0 "/path/to/video.mp4"`. Under 30 seconds: do not submit. Credits: the minutes, rounded up.
+1. Pre-checks with the shell: the file exists, its size, and its duration in seconds if `ffprobe` is installed. Under 30 seconds: do not submit. Credits: the minutes, rounded up.
 2. `create_upload_link` with `filename` = the real name with its extension (.mp4, .mov, .mkv, .webm ...). The stored file keeps that extension and the project is titled after it.
-3. Send the bytes with one PUT. Quote the URL (it contains `&`). The Content-Type header is not checked, so `video/mp4` is fine for any video:
-   `curl -sS --fail -X PUT -H "Content-Type: video/mp4" --upload-file "/path/to/video.mp4" "UPLOAD_URL"`
+3. Send the bytes with one PUT, using the command in the skill's upload step. Quote the URL (it contains `&`). The Content-Type header is not checked, so `video/mp4` is fine for any video.
 4. `submit_uploaded_video` with the exact `gs_path` returned in step 2.
 
 | Error | Meaning | What to do |
