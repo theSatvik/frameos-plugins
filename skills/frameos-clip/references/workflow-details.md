@@ -34,7 +34,7 @@ Reference for the frameos-clip skill. Field names and messages are exactly what 
 
 | Host type | Examples | How to wait | Render | Caption export |
 |---|---|---|---|---|
-| Has a shell | Claude Code, Codex, Gemini CLI, Copilot CLI, Devin, Cursor or VS Code agents with a terminal | `sleep 30` (render) or `sleep 5` (export) in the shell between calls; keep each sleep at 60 seconds or less | first check at about 60 s, then every 20-30 s; stop after about 45 min (or ETA plus 15 min if longer) | every 5 s; stuck after 10 min |
+| Has a shell | Claude Code, Codex, Gemini CLI, Copilot CLI, Devin, Cursor or VS Code agents with a terminal | `sleep 30` between render checks or `sleep 5` between export checks, in the shell; keep each sleep at 60 seconds or less | first check at about 60 s, then every 20-30 s; stop after about 45 min (or ETA plus 15 min if longer) | every 5 s; stuck after 10 min |
 | Chat only | claude.ai, Claude Desktop chat, ChatGPT, Perplexity | tool calls run back to back; you cannot pause | at most 3 checks per reply, spaced by other useful work, then report progress and hand back | a few checks spaced by other work, then hand back |
 
 - If the shell refuses to sleep, space checks by doing other useful work, and never call `get_job` more than twice a minute.
